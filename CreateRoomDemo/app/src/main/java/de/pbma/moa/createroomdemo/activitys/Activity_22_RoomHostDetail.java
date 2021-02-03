@@ -32,7 +32,6 @@ import androidx.core.content.FileProvider;
 import androidx.lifecycle.LiveData;
 
 import com.google.zxing.WriterException;
-import com.google.zxing.client.android.BuildConfig;
 
 import org.joda.time.DateTime;
 
@@ -45,6 +44,7 @@ import java.util.Calendar;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicLong;
 
+import de.pbma.moa.createroomdemo.BuildConfig;
 import de.pbma.moa.createroomdemo.PdfClass;
 import de.pbma.moa.createroomdemo.QrCodeManger;
 import de.pbma.moa.createroomdemo.R;
