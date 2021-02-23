@@ -53,14 +53,14 @@ captures/
 .externalNativeBuild
 
 # latex
-.aux
-.bbl
-.bcf
-.blg
-.lof
-.log
-.out
-.xml
-.gz
-.bak
-.toc
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.lof
+*.log
+*.out
+*.xml
+*.gz
+*.bak
+*.toc
