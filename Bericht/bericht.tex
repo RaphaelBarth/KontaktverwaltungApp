@@ -1,12 +1,20 @@
 \section{Beschreibung}
+\todo{einheitliche schreib weise für klassen namen evtl. kursive}
 \label{sec:Allgemeine Beschreibung}
 \section{Architektur}
 \label{sec:Architektur}
 \section{PDF}
 \label{sec:PDF}
+Das System soll dem Nutzer die Möglichkeit bieten Informationen über eine raum als PDF zu teilen. Dabei gibt es zwei unterschiedliche PDF‘S, diese beinhalten die generellen raum Informationen sowie entweder den dazu gehörigen QR-Code oder eine Liste aller Teilnehmer.
+Das Android Framework stellt zum Erstellen von PDF‘S die PDFDokument Klasse bereit in dieser wir eine Seite mit den entsprechenden Formatierungen erstellt. Für eine A4 Seite nach DIN Norm ergeben sich die werte 846x594pixel näheres hierzu zu Berechnung ist unter \href{https://developer.android.com/reference/android/graphics/pdf/PdfDocument.PageInfo}{developer.android} zu finden. Die erstellte Seite kann mittels eines Canvas editiert werden. Formatierung einstellengen der Texte und Grafikelemente lassen sich über eine Paint Klasse einstellen.
+Das erstellt PDFDokument wird im externen Datei Verzeichnis der App abgespeichert. Der Nutzer besitzt bei einem fehlgeschlagenen teilen somit trotzdem die Möglichkeit auf das erstellte PDF zuzugreifen.
+Um das PDF zu teilen wird ein FileProvider verwendet welcher im Manifest deklariert ist.  Der FileProvider bietet dem Nutzer einer Auswahl der installierten Anwendungen über welcher er das PDF teilen kann.
+
+Für eine spätere App Version ist das PDF mit der Übersicht aller Teilnehmer zu überarbeiten. In der aktuellen Version wird die E-Mail-Adresse ab einer bestimmten länge zum teil mit in die nächste spalte geschrieben. Ziel ist es das ab einer bestimmten länge ein automatischer Zeilenumbruch in der entsprechenden Spalte stattfindet.
+
 \section{RoomLifecycleService}
 \label{sec:RoomLifecycleService}
-Der RoomLifecycleService steuert, wie der Name bereits andeutet, in welchem Zustand sich Räume befinden. Er wird ausschließlich im Host-Modus betrieben.
+Der RoomLifecycleService steuert, wie der Name bereits andeutet, in welchem Zustand sich Räume befinden. Er wird ausschließlich im Host-Modus betrieben \todo{passt nicht ganz wird au im participant modus genutzt}.
 Die Entscheidung fiel auf einen Service, weil wir auch im nicht-geöffneten Zustand der App auf Nachrichten von außen reagieren wollte. 
 Beispiel: Der Host eröffnet einen Raum und wechselt die App oder sperrt das Smartphone. Wenn die Kontaktverfolgungsapp nun nicht mehr im Vordergrund ist während das Timeout ausläuft oder der Raum in die Öffnungszeit reinrutscht, dann würde er nicht geschlossen respektive geöffnet werden. Um also zu vermeiden dass der Host über die gesamt Zeit sein Smartphone nicht verwenden kann und das Display mit hohem Stromverbrauch den Akku entleert haben wir uns für einen Service entschieden. 
 \\\\
@@ -27,6 +35,96 @@ Auf der Teilnehmerseite reagiert der Observer auf die Änderung des Raumstatuses
 \section{Tag - QR und NFC}
 \label{sec:Tag - QR und NFC}
 \section{MQTT Service}
+MQTT Service
+Das MQTT Protokol dient als 
+Der MQTT Service wird in der StartActivity gestartet und beendet alle anderen Activitys binden nur auf den MQTTService. Das Binden des MQTTServices findet in den Acticvities 11\_EnterViaNfcQr, 14\_RoomPArticipntsDetails, 22\_RoomHostDetails statt. Des Weiteren wird der Service in dem RoomLiveCycle Service gebunden näheres hierzu unter Abschnitt.  Beim verwenden des MQTT Services wird in jeder Activity geprüft ob dieser schon gebunden ist ( not null ) ist dies nicht der Fall wird das zu sendende Object zwischen gespeichert und automatisch in Anschluss an das binden gesendet. 
+Die mittels MQTT Service zu nutzenden Methoden sin ausführlich im Code mittels JavaDoc beschrieben. 
+
+Allgemeines Nachrichten Format 
+Die Kommunikation zwischen dem Gastgeber und den Teilnehmern verläuft beim MQTT Protokoll über sognannte Topics hierzu siehe Abbildung. Für einen Raum werde immer 2 Topics benötigt. Der Teilnehmer kann einem Raum über die Topic moagm/Room-Tag beitreten. Der Gastgeber sendet die nötigen Informationen für die Teilnehmer über die Topic moagm/Room-Tag/public an alle Teilnehmer. Durch diese Trennung der Kanäle wird verhindert das Teilnehmer nach richten von anderen Teilnehmern an den host empfangen.
+
+Insgesamt gibt es vier verschiedene Nachrichtentypen welche zwischen den Teilnehmern und dem Gastgeber ausgetauscht werden. Alle Nachrichten werden im JSON- Format versendet. Dabei kann man die Nachrichten in zwei gruppen unterteilen. Die Nachrichten anmeldung.JSON, abmeldung.JSON werden vom Teilnehmer an den Host gesendet. Teilnermer.JSON und Rauminfo.JSON sendet der Host an alle Teilnehmer. Der Aufbau der Aufbau der einzelnen JSON Formaten ist in \cref{img:mqtt} zu sehen. Mittels eines Konverters werden die entsprechenden JSON Objekte erzeugt und wieder in verwendbare Datentypen zurück gewandelt. Zum identifizieren eines Nachrichten Types wird (warum auch immer..) nicht das Type Feld benutzt. Das Identifizieren wird über die Schlüsselworte ENTERTIME (anmeldung.JSON), EXITTIME (abmeldung.JSON), RAUM (raumInfo.JSON) sowie TEILNEHMERLIST (teilnehmer.JSON) durchgeführt. Abhängig von dem empfangen Datentyp werden unterschiedliche Aktionen durch geführt, welche im Folgenden näher erläutert werden. 
+Mit der \cref{lst:anmeldung} dargestellten anmeldung.json meldet sich an Teilnehmer beim Gastgeber an und stellt eine Verbindung zu der entsprechende Raum Topic her. In der Nachricht sind Alle relevanten Informationen des Teilnehmers enthalten sowie die Uhrzeit wann er den Raum betreten hat. Der MQTT Service konvertiert das erhaltene JSON mittels der AdapterJsonMqtt Klasse in den passenden daten Typ. Das erhalte Teilnehmerobject wird Inder Datenbanktabelle dbParticipant mit der ID des entsprechenden Raumes abgespeichert. Die entsprechende RaumID kann das Topic entnommen werden, auf über welche das JSON object empfangen wurde. Im Anschluss wird an alle Teilnehmer ein Teilnehmer.json sowie Rauminfo.json gesendet.
+
+\todo{passenden titel für \cref{img:mqtt} finden}
+\begin{figure}
+	\centering
+	\includegraphics[width =0.8\textwidth]{images/mqttservice.pdf}
+	\caption{Darstellung des MQTT Topics.}
+	\label{img:mqtt}
+\end{figure}
+
+Die Nachricht abmeldung.json dargestellt in \cref{lst:abmeldung}   sendet der Teilnehmer an den Gastgeber sobald er den Raum verlässt. Dabei meldet sich der Teilnehmer ebenfalls von der entsprechen raum topic der MQTT Verbindung ab. Analog zum anmelden.json enthält diese Nachricht alle wichtigen Informationen über den Teilnehmer sowie die Uhrzeit zu welcher er den Raum verlässt. Im MQTT Service wird mithilfe des erzeugten Teilnehmer Objektes und der RaumID die Exittime des dazugehörenden Teilnehmers aktualisiert.  
+
+\cref{lst:rauminfo} stellt die Nachricht vom Tye Rauminfo.JSON da. Diese Nachricht enthalten sämtliche Informationen über einen Raum. Jede Vom Teilnehmer Empfangen Rauminfo.json wird in ein RaumObjcet konvertiert und in die Datenbank Tabelle dbRoom eingefügt bzw. aktualisiert den bereits vorhanden Eintrag. Wenn der Gastgeber eine RAuminfo.json versendet welche den Teilnehmern mitteilt das derRuam nun geschlossen ist meldet der MQTT ervice den Gastgeber automatisch von der entsprechden MQTT Topic ab.
+
+Der in \cref{lst:teilnehmer} dargestellte Nachrichtentype Teilnehmer.JSON beinhaltet eine Liste aller Teilnehmer eines Raumes. Bei Empfangen der Nachricht wird das darin enthaltene JSONArray in eine Liste von Participants Konvertiert. Die Participants der Liste werden mit der Entsprechden RaumID welche über die Topic ermittelbar ist in die Datenbanktabelle dbParticipants eingefügt. Um zu verhindern das Teilnehmer mehrfach eingetragen werden wird die anzahlt der Bereits früher eingefügten Teilnehmer des raumes ermittelt. Aus der Liste der erhaltenen Teilnehmer werden nur participants eingefügt welche einen mindestens gleich großen Index besitzen wie die ermittelte anzahlt. Diese Variante funktioniert da sich die Reihenfolge der Teilnehmer sich in der Datenbank nie ändert.
+
+\begin{minipage}[t]{0.45\linewidth}
+\begin{lstlisting}[language=json, label={lst:anmeldung}, caption={anmeldung.json}]
+{
+ "TYPE": "LOGOUT",
+ "TEILNEHMER": {
+	"NAME": "",
+	"EXTRA": "",
+	"EMAIL": "",
+	"PHONE": ""},
+ "EXITTIME": 0
+}
+\end{lstlisting}
+\end{minipage}
+\qquad
+\begin{minipage}[t]{0.45\linewidth}
+\begin{lstlisting}[language=json,label={lst:abmeldung}, caption={abmeldung.json}]
+{
+ "TYPE": "LOGIN",
+ "TEILNEHMER": {
+	"NAME": "",
+	"EXTRA": "",
+	"EMAIL": "",
+	"PHONE": ""},
+ "ENTERTIME": "0"
+}
+\end{lstlisting}
+\end{minipage}
+\\
+\begin{minipage}[t]{0.45\linewidth}
+\begin{lstlisting}[language=json, label={lst:rauminfo}, caption={rauminfo.json}]
+{
+ "TYPE": "RAUMINFO",
+ "RAUM": {
+	"ID": 0,
+	"ROOMNAME": "",
+	"STATUS": "",
+	"HOST": "",
+	"EMAIL": "",
+	"PHONE": "",
+	"PLACE": "",
+	"ADDRESS": "",
+	"EXTRA": "",
+	"ROOMSTARTTIME": 0,
+	"ROOMENDTIME": 0}
+}
+\end{lstlisting}
+\end{minipage}
+\qquad
+\begin{minipage}[t]{0.45\linewidth}
+\begin{lstlisting}[language=json, label={lst:teilnehmer}, caption={teilnehmer.JSON}]
+{
+ "TYPE": "TEILNEHMER",
+ "TEILNEHMERLIST": [
+	{
+	 "NAME": "",
+	 "EXTRA": "",
+ 	 "EMAIL": "",
+ 	 "PHONE": "",
+ 	 "ENTERTIME": 0,
+	 "EXITTIME": 0},
+	...
+ ]
+}
+\end{lstlisting}
+\end{minipage}
 \label{sec:MQTT Service}
 \section{Datenbank}
 \label{sec:Datenbank}
@@ -34,3 +132,8 @@ Auf der Teilnehmerseite reagiert der Observer auf die Änderung des Raumstatuses
 \label{sec:Fazit}
 \section{Ausblick}
 \label{sec:Ausblick}
+Sonstiges
+Die App ist in der Lage bei einem Verlust der Internetverbindung dem Nutzer ein Feedback mit zu teilen und ein hartes Abbrechen zu verhindern. Dafür wird ein BroadcastReciever verwendet welcher Auf Netzwerkänderungen hört. Der BroadcastReciver wird beim Erstellen des RommLivecyclesServices an diesen gebunden. Bricht die Internetverbindung weg werden alle Services gestoppt. Des Weiteren wird dem Nutzer mitgeteilt das die Internetverbindung verloren wurde und er muss die App mit einer bestehen Internetverbindung neu starten muss.
+
+Sämtliche benötigten Informationen über den Nutzer der App werden mittels Preferences erfasst. Ohne das vollständige Ausfüllen der Preferences ist in Verwenden der App nicht möglich. Um später einen eleganten Zugriff auf die Preferences zu erhalten ist eine MySelf Klasse implementiert.
+
