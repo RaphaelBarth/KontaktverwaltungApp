@@ -1,3 +1,4 @@
+\sloppy
 \section{Beschreibung}
 \todo{einheitliche schreib weise für klassen namen evtl. kursive}
 \label{sec:Allgemeine Beschreibung}
@@ -17,7 +18,7 @@ Für eine spätere App Version ist das PDF mit der Übersicht aller Teilnehmer z
 Der RoomLifecycleService steuert, wie der Name bereits andeutet, in welchem Zustand sich Räume befinden. Er wird ausschließlich im Host-Modus betrieben \todo{passt nicht ganz wird au im participant modus genutzt}.
 Die Entscheidung fiel auf einen Service, weil wir auch im nicht-geöffneten Zustand der App auf Nachrichten von außen reagieren wollte. 
 Beispiel: Der Host eröffnet einen Raum und wechselt die App oder sperrt das Smartphone. Wenn die Kontaktverfolgungsapp nun nicht mehr im Vordergrund ist während das Timeout ausläuft oder der Raum in die Öffnungszeit reinrutscht, dann würde er nicht geschlossen respektive geöffnet werden. Um also zu vermeiden dass der Host über die gesamt Zeit sein Smartphone nicht verwenden kann und das Display mit hohem Stromverbrauch den Akku entleert haben wir uns für einen Service entschieden. 
-\\\\
+
 Wird der Service gestartet wird die Raumüberprüfungsroutine nebenläufig in einem neuen Thread gestartet. Dadurch verhindern wir dass das der Hauptthread machen muss. Der Raumstatus wird jede Sekunde mit einem Busy-Wait-Algorithmus überprüft. Das sollte man nicht in den Hauptthread auslagern, da er diesen unnötig blockiert. Der Datenbankzugriff ist nicht die Ursache für die Designentscheidung, denn dadurch dass wir schon über das Repository nebenläufig auf die Datenbank zugreifen sind wir bezüglich Datenbank-Latenz bereits auf der sicheren Seite.
 Im Thread überprüfen wir initial ob aktuell geschlossene Räume geöffnet und aktuell geöffnete Räume geschlossen werden sollten.
  Nebenher wird im Mainthread versucht den MQTT-Service zu einzubinden. Denn der Host soll natürlich auf alle Räume die sich öffnen hören bzw. aufhören auf alle Räume zu hören die sich geschlossen haben. 
@@ -32,16 +33,45 @@ Ein Raum hat drei mögliche Zustände:
  Jede Sekunde wird also überprüft ob Räume die geschlossen sind geöffnet werden sollen, ob Räume die sich öffnen werden geöffnet werden können und ob Räume die geöffnet sind geschlossen werden sollten. 
 Falls noch Teilnehmer in zu schließenden Räumen sind werden Sie rausgeworfen. In der Datenbank wird dann für alle Teilnehmer als Austrittszeitpunkt die Timeout-Zeit des Raums eingetragen. 
 Auf der Teilnehmerseite reagiert der Observer auf die Änderung des Raumstatuses und beendet den Raum auch real für den Teilnehmer.
-\section{Tag - QR und NFC}
-\label{sec:Tag - QR und NFC}
+\section{RoomTag - QR und NFC}
+\label{sec:RoomTag - QR und NFC}
+Damit Räume distinktiv sind besitzen Sie einen Identifier. Dieser nennt sich Room-Tag und ist zusammengesetzt aus dem Raumnamen, der Email-Adresse des Hosts und der Id des Raums in der Datenbank der Hostdatei. Beispiel für einen Room-Tags: Vorlesung 1/dozent@hs-mannheim.de/0.
+Teilnehmer benötigen diesen Tag um dem Raum beizutreten. Dies können Sie über NFC oder über einen QR-Code durchführen. Eine manuelle Eingabe ist nicht implementiert.
+
+Um den Tag weiterzugeben kann der Veranstalter nach dem erstellen des Raumes ein PDF generieren und per E-Mail versenden. 
+Das passiert in der Methode shareRoom() in der Klasse Activity\_22\_RoomHostDetail. 
+In einem solchen PDF ist neben Raum-Metadaten wie Titel, Start und End-Zeitpunkt auch ein QR-Code über den die Teilnehmer beitreten können. 
+Wir benutzen für die Erstellung die externe Bibliothek zxing von journeyapps unter der Apache 2.0 Lizenz. Wir benutzen dafür die Klasse BarcodeEncoder in der Klasse QRCodeManager.
+
+Ein Schreiben des NFC Codes auf einen NFC Sticker ist nicht implemenentiert.
+ Apps wie NFC Tools des Unternehmens wakdev aus dem PlayStore schaffen hier aber Abhilfe. Dort kann der Tag in Plaintext-Format auf den NFC Tag geschrieben werden.
+Eine URI sollte nicht vergeben werden, da der Scanner nicht drauf reagieren würde.
+
+Im Laufe der Entwicklung definierten wir fest, dass ein Veranstalter seinen eigenen Raum nicht betreten dürfte. Außerdem sollte ein Teilnehmer, nachdem er eine Sitzung verlassen hatte, nicht wieder erneut teilnehmen dürfen. Damit wurden irreführende Einträge in der Auswertung vermieden. Dieses Verhalten wird mit der Methode checkEnterPeriomission in der Activity\_11\_EnterViaQrNfc abgefangen.
+\subsection{Betreten über QR}
+\label{subsec: Betreten über QR}
+Wünscht der Teilnehmer über QR einzutreten, dann wird in der Activity\_11\_EnterViaQrNfc die Funktion callScanner() aus der QrCodeManager-Klasse gerufen. Dort wird die Scanner-Activitiy aus zxing gestartet, die einen Rückgabewert liefert. Es ist auch möglich den Scanner zu vorkonfigurieren, so, dass z.B. immer der Kamerablitz angeschaltet ist um auch bei schlechten Licht-Bedingungen den QR-Code gut zu erkennen. 
+Außerdem kann ein Timeout eingestellt werden, falls der Nutzer den QR Code in einer gewissen Zeit nicht einscanned.
+In unserem Projekt wurde sich aber wegen der Benutzerfreundlichkeit gegen diese Konfiguration entschieden.
+Der Scanner wird über einen Intent gestartet und liefert wenn er fertig ist ein Ergebnis zurück.
+Dieses wird in der Methode onActivityResult verarbeitet. Wenn der Scan geklappt hat wird die Methode enterRoom() aufgerufen. Dort werden die Daten des Room-Tags in die Datenbank eingetragen und die Activity\_14\_RoomParticipantDetail gestartet. Der Teilnehmer hört dort dann auf das korrekte MQTT Topic. Er hat den Raum betreten.
+\subsection{Betreten über NFC}
+\label{subsec: Betreten über NFC}
+Wünscht der Teilnehmer über QR einzutreten, dann wird in der Activity\_11\_EnterViaQrNfc die Funktion armNFCAdapter() aufgerufen. Es wird überprüft ob das Smartphone überhaupt einen NFC Sensor hat.
+Falls das erfüllt ist wird dieser auf events des Types ACTION\_NDEF\_DISCOVERED scharfgeschaltet. 
+Man sagt auch er ist im Foreground-Dispatch-Modus.
+Das bedeutet dass, wenn ein neues NFC Tag detektiert wurde, ein gewisser Intent gestartet wird. 
+Falls das der Fall ist, wird die gleiche Activity\_11\_EnterViaQrNfc noch einmal gestartet allerdings mit der Action NFC\_INTENT\_ACTION. 
+In der onResume() wird überprüft ob diese Action gesetzt ist, denn nur dann kehrt die Anwendung ja aus dem NFC-Intent zurück. 
+In den Extras des NFC-Intents befindet sich dann er abgelesene Room-Tag. Der Ablauf danach ist wie beim Betreten über QR. enterRoom() wird gerufen und Activity\_14\_RoomParticipantDetail wird gestartet.
 \section{MQTT Service}
 MQTT Service
 Das MQTT Protokol dient als 
 Der MQTT Service wird in der StartActivity gestartet und beendet alle anderen Activitys binden nur auf den MQTTService. Das Binden des MQTTServices findet in den Acticvities 11\_EnterViaNfcQr, 14\_RoomPArticipntsDetails, 22\_RoomHostDetails statt. Des Weiteren wird der Service in dem RoomLiveCycle Service gebunden näheres hierzu unter Abschnitt.  Beim verwenden des MQTT Services wird in jeder Activity geprüft ob dieser schon gebunden ist ( not null ) ist dies nicht der Fall wird das zu sendende Object zwischen gespeichert und automatisch in Anschluss an das binden gesendet. 
-Die mittels MQTT Service zu nutzenden Methoden sin ausführlich im Code mittels JavaDoc beschrieben. 
+Die mittels MQTT Service zu nutzenden Methoden sind ausführlich im Code mittels JavaDoc beschrieben. 
 
 Allgemeines Nachrichten Format 
-Die Kommunikation zwischen dem Gastgeber und den Teilnehmern verläuft beim MQTT Protokoll über sognannte Topics hierzu siehe Abbildung. Für einen Raum werde immer 2 Topics benötigt. Der Teilnehmer kann einem Raum über die Topic moagm/Room-Tag beitreten. Der Gastgeber sendet die nötigen Informationen für die Teilnehmer über die Topic moagm/Room-Tag/public an alle Teilnehmer. Durch diese Trennung der Kanäle wird verhindert das Teilnehmer nach richten von anderen Teilnehmern an den host empfangen.
+Die Kommunikation zwischen dem Gastgeber und den Teilnehmern verläuft beim MQTT Protokoll über sogenannte Topics hierzu siehe Abbildung. Für einen Raum werde immer 2 Topics benötigt. Der Teilnehmer kann einem Raum über die Topic moagm/Room-Tag beitreten. Der Gastgeber sendet die nötigen Informationen für die Teilnehmer über die Topic moagm/Room-Tag/public an alle Teilnehmer. Durch diese Trennung der Kanäle wird verhindert das Teilnehmer nach richten von anderen Teilnehmern an den host empfangen.
 
 Insgesamt gibt es vier verschiedene Nachrichtentypen welche zwischen den Teilnehmern und dem Gastgeber ausgetauscht werden. Alle Nachrichten werden im JSON- Format versendet. Dabei kann man die Nachrichten in zwei gruppen unterteilen. Die Nachrichten anmeldung.JSON, abmeldung.JSON werden vom Teilnehmer an den Host gesendet. Teilnermer.JSON und Rauminfo.JSON sendet der Host an alle Teilnehmer. Der Aufbau der Aufbau der einzelnen JSON Formaten ist in \cref{img:mqtt} zu sehen. Mittels eines Konverters werden die entsprechenden JSON Objekte erzeugt und wieder in verwendbare Datentypen zurück gewandelt. Zum identifizieren eines Nachrichten Types wird (warum auch immer..) nicht das Type Feld benutzt. Das Identifizieren wird über die Schlüsselworte ENTERTIME (anmeldung.JSON), EXITTIME (abmeldung.JSON), RAUM (raumInfo.JSON) sowie TEILNEHMERLIST (teilnehmer.JSON) durchgeführt. Abhängig von dem empfangen Datentyp werden unterschiedliche Aktionen durch geführt, welche im Folgenden näher erläutert werden. 
 Mit der \cref{lst:anmeldung} dargestellten anmeldung.json meldet sich an Teilnehmer beim Gastgeber an und stellt eine Verbindung zu der entsprechende Raum Topic her. In der Nachricht sind Alle relevanten Informationen des Teilnehmers enthalten sowie die Uhrzeit wann er den Raum betreten hat. Der MQTT Service konvertiert das erhaltene JSON mittels der AdapterJsonMqtt Klasse in den passenden daten Typ. Das erhalte Teilnehmerobject wird Inder Datenbanktabelle dbParticipant mit der ID des entsprechenden Raumes abgespeichert. Die entsprechende RaumID kann das Topic entnommen werden, auf über welche das JSON object empfangen wurde. Im Anschluss wird an alle Teilnehmer ein Teilnehmer.json sowie Rauminfo.json gesendet.
@@ -132,8 +162,10 @@ Der in \cref{lst:teilnehmer} dargestellte Nachrichtentype Teilnehmer.JSON beinha
 \label{sec:Fazit}
 \section{Ausblick}
 \label{sec:Ausblick}
+Mögliche Features im Bereich NFC wären die Beschreibung eines Tags aus der App heraus, um so auf Drittanbieter-Apps verzichten zu können. Desweiteren wäre eine manuelle Uri sinnvoll. So würde der NFC Scannern nicht auf jeden Tag reagieren, sondern nur auf solche die er auch beschrieben hat. Ein weiteres Feature wäre es manuell den Room-Tag eines Raumes einzugeben um ihn zu betreten. Diese Möglichkeit gibt es momentan noch nicht.
+
 Sonstiges
-Die App ist in der Lage bei einem Verlust der Internetverbindung dem Nutzer ein Feedback mit zu teilen und ein hartes Abbrechen zu verhindern. Dafür wird ein BroadcastReciever verwendet welcher Auf Netzwerkänderungen hört. Der BroadcastReciver wird beim Erstellen des RommLivecyclesServices an diesen gebunden. Bricht die Internetverbindung weg werden alle Services gestoppt. Des Weiteren wird dem Nutzer mitgeteilt das die Internetverbindung verloren wurde und er muss die App mit einer bestehen Internetverbindung neu starten muss.
+Die App ist in der Lage bei einem Verlust der Internetverbindung dem Nutzer ein Feedback mitzuteilen und ein hartes Abbrechen zu verhindern. Dafür wird ein BroadcastReciever verwendet welcher Auf Netzwerkänderungen hört. Der BroadcastReciver wird beim Erstellen des RommLivecyclesServices an diesen gebunden. Bricht die Internetverbindung weg werden alle Services gestoppt. Des Weiteren wird dem Nutzer mitgeteilt das die Internetverbindung verloren wurde und er muss die App mit einer bestehen Internetverbindung neu starten muss.
 
 Sämtliche benötigten Informationen über den Nutzer der App werden mittels Preferences erfasst. Ohne das vollständige Ausfüllen der Preferences ist in Verwenden der App nicht möglich. Um später einen eleganten Zugriff auf die Preferences zu erhalten ist eine MySelf Klasse implementiert.
 
