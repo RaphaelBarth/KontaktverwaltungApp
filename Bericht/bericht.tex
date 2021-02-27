@@ -7,12 +7,12 @@
 \label{sec:Architektur}
 \section{PDF}
 \label{sec:PDF}
-Das System soll dem Nutzer die Möglichkeit bieten Informationen über eine raum als PDF zu teilen. Dabei gibt es zwei unterschiedliche PDF‘S, diese beinhalten die generellen raum Informationen sowie entweder den dazu gehörigen QR-Code oder eine Liste aller Teilnehmer.
-Das Android Framework stellt zum Erstellen von PDF‘S die PDFDokument Klasse bereit in dieser wir eine Seite mit den entsprechenden Formatierungen erstellt. Für eine A4 Seite nach DIN Norm ergeben sich die werte 846x594pixel näheres hierzu zu Berechnung ist unter \href{https://developer.android.com/reference/android/graphics/pdf/PdfDocument.PageInfo}{developer.android} zu finden. Die erstellte Seite kann mittels eines Canvas editiert werden. Formatierung einstellengen der Texte und Grafikelemente lassen sich über eine Paint Klasse einstellen.
-Das erstellt PDFDokument wird im externen Datei Verzeichnis der App abgespeichert. Der Nutzer besitzt bei einem fehlgeschlagenen teilen somit trotzdem die Möglichkeit auf das erstellte PDF zuzugreifen.
-Um das PDF zu teilen wird ein FileProvider verwendet welcher im Manifest deklariert ist.  Der FileProvider bietet dem Nutzer einer Auswahl der installierten Anwendungen über welcher er das PDF teilen kann.
+Das System soll dem Nutzer die Möglichkeit bieten Informationen über einen Raum als PDF zu teilen. Dabei gibt es zwei unterschiedliche PDF‘s, diese beinhalten die generellen Rauminformationen, sowie den dazugehörigen QR-Code oder eine Liste aller Teilnehmer.
+Das Android-Framework  verfügt über eine \textit{PdfDocument} Klasse, die zum Erstellen von PDF‘s genutzt wird. Für eine A4 Seite nach DIN Norm ergeben sich die Werte 846x594 Pixel. Näheres zur Berechnung der Pixelwerte ist unter \href{https://developer.android.com/reference/android/graphics/pdf/PdfDocument.PageInfo}{developer.android} zu finden. Die erstellte Seite wird mittels eines Canvas editiert. Die Formatierung  der Texte und Grafikelemente lassen sich über die \textit{Paint} Klasse einstellen.
+Das erstellte PdfDokument wird im externen Dateiverzeichnis der App abgespeichert. Der Nutzer besitzt bei einem fehlgeschlagenen Teilen somit trotzdem die Möglichkeit auf das erstellte PDF zuzugreifen.
+Um das PDF zu teilen, wird ein FileProvider verwendet, welcher im Manifest deklariert ist.  Der FileProvider bietet dem Nutzer eine Auswahl der installierten Anwendungen, über welche er das PDF teilen kann.
 
-Für eine spätere App Version ist das PDF mit der Übersicht aller Teilnehmer zu überarbeiten. In der aktuellen Version wird die E-Mail-Adresse ab einer bestimmten länge zum teil mit in die nächste spalte geschrieben. Ziel ist es das ab einer bestimmten länge ein automatischer Zeilenumbruch in der entsprechenden Spalte stattfindet.
+Für die nächste Version der App muss das PDF mit der Übersicht aller Teilnehmer überarbeitet werden. In der aktuellen Version wird die E-Mail Adresse ab einer bestimmten Länge zum Teil mit in die nächste Spalte geschrieben. Ziel ist es, dass ab einer bestimmten Länge ein automatischer Zeilenumbruch in der entsprechenden Spalte stattfindet.
 
 \section{RoomLifecycleService}
 \label{sec:RoomLifecycleService}
@@ -66,29 +66,35 @@ Das bedeutet dass, wenn ein neues NFC Tag detektiert wurde, ein gewisser Intent 
 Falls das der Fall ist, wird die gleiche Activity\_11\_EnterViaQrNfc noch einmal gestartet allerdings mit der Action NFC\_INTENT\_ACTION. 
 In der onResume() wird überprüft ob diese Action gesetzt ist, denn nur dann kehrt die Anwendung ja aus dem NFC-Intent zurück. 
 In den Extras des NFC-Intents befindet sich dann er abgelesene Room-Tag. Der Ablauf danach ist wie beim Betreten über QR. enterRoom() wird gerufen und Activity\_14\_RoomParticipantDetail wird gestartet.
-\section{MQTT Service}
-Der MQTT Service stellt die MQTT Funktionalität bereit über welche die App mit anderen Smartphones kommuniziert.
-Das Starten und das Stoppen des MQTT Services findet in er StartActivity statt. Alle anderen Activitys binden nur auf den MQTTService. Das Binden des MQTTServices findet in den Acticvities 11\_EnterViaNfcQr, 14\_RoomPArticipntsDetails, 22\_RoomHostDetails statt. Des Weiteren wird der Service in dem RoomLiveCycle Service gebunden näheres hierzu unter Abschnitt.  Beim verwenden des MQTT Services wird in jeder Activity geprüft ob dieser schon gebunden ist ( not null ) ist dies nicht der Fall wird das zu sendende Object zwischen gespeichert und automatisch in Anschluss an das binden gesendet. 
-Die mittels MQTT Service zu nutzenden Methoden sind ausführlich im Code mittels \href{https://scm.inftech.hs-mannheim.de/gogs/moa/20moagm/src/dev/Doku/javadoc}{JavaDoc} beschrieben. 
+\section{MQTT-Service}
+Der MQTT-Service stellt die MQTT-Funktionalität bereit, über welche die App mit anderen Smartphones kommuniziert.
+Das Starten und Stoppen des MQTT-Service findet in der \textit{Activity\_00\_StartActivity} statt. Alle anderen Activities binden lediglich den MQTT-Service. Das Binden des MQTT-Service findet in  \textit{Activity\_11\_EnterViaNfcQr}, \textit{Activity\_14\_RoomParticipantsDetails} und \textit{Activity\_22\_RoomHostDetails} statt. Des Weiteren wird der Service in dem RoomLivecycle-Service gebunden. Näheres hierzu unter \cref{sec:RoomLifecycleService}.  Beim Verwenden des MQTT-Service wird in jeder Activity geprüft, ob dieser schon gebunden ist (not null). Ist dies nicht der Fall, wird das zu sendende Objekt zwischengespeichert und bei erfolgreichem Binden verarbeitet. 
+Die im MQTT-Service implementierten Methoden sind ausführlich mittels \href{https://scm.inftech.hs-mannheim.de/gogs/moa/20moagm/src/dev/Doku/javadoc}{JavaDoc} erklärt. 
 
-Die Kommunikation zwischen dem Gastgeber und den Teilnehmern verläuft beim MQTT Protokoll über sogenannte Topics hierzu siehe Abbildung. Für einen Raum werde immer 2 Topics benötigt. Der Teilnehmer kann einem Raum über die Topic moagm/Room-Tag beitreten. Der Gastgeber sendet die nötigen Informationen für die Teilnehmer über die Topic moagm/Room-Tag/public an alle Teilnehmer. Durch diese Trennung der Kanäle wird verhindert das Teilnehmer nach richten von anderen Teilnehmern an den host empfangen.
+Die Kommunikation zwischen dem Host und den Teilnehmern verläuft beim MQTT-Protokoll über sogenannte Topics. Für einen Raum werden, wie \cref{img:mqtt} zeigt, immer zwei Topics benötigt. Der Teilnehmer kann einem Raum über die Topic \textit{moagm/Room-Tag} beitreten. Der Host sendet die nötigen Informationen für die Teilnehmer über die Topic \textit{moagm/Room-Tag/public} an alle Teilnehmer. Durch die Trennung der Kanäle wird verhindert, dass Teilnehmer die Nachrichten, welche von anderen Teilnehmern an den Host gesendet werden, empfangen können.
 
-Insgesamt gibt es vier verschiedene Nachrichtentypen welche zwischen den Teilnehmern und dem Gastgeber ausgetauscht werden. Alle Nachrichten werden im JSON- Format versendet. Dabei kann man die Nachrichten in zwei Gruppen unterteilen. Die Nachrichten anmeldung.JSON, abmeldung.JSON werden vom Teilnehmer an den Host gesendet. Teilnermer.JSON und Rauminfo.JSON sendet der Host an alle Teilnehmer. Der Aufbau der Aufbau der einzelnen JSON Formaten ist in \cref{img:mqtt} zu sehen. Mittels eines Konverters werden die entsprechenden JSON Objekte erzeugt und wieder in verwendbare Datentypen zurück gewandelt. Zum identifizieren eines Nachrichten Types wird (warum auch immer..) nicht das Type Feld benutzt. Das Identifizieren wird über die Schlüsselworte ENTERTIME (anmeldung.JSON), EXITTIME (abmeldung.JSON), RAUM (raumInfo.JSON) sowie TEILNEHMERLIST (teilnehmer.JSON) durchgeführt. Abhängig von dem empfangen Datentyp werden unterschiedliche Aktionen durch geführt, welche im Folgenden näher erläutert werden. 
-Mit der \cref{lst:anmeldung} dargestellten anmeldung.json meldet sich an Teilnehmer beim Gastgeber an und stellt eine Verbindung zu der entsprechende Raum Topic her. In der Nachricht sind Alle relevanten Informationen des Teilnehmers enthalten sowie die Uhrzeit wann er den Raum betreten hat. Der MQTT Service konvertiert das erhaltene JSON mittels der AdapterJsonMqtt Klasse in den passenden Datentyp. Das erhalte Teilnehmerobject wird Inder Datenbanktabelle dbParticipant mit der ID des entsprechenden Raumes abgespeichert. Die entsprechende RaumID kann das Topic entnommen werden, auf über welche das JSON object empfangen wurde. Im Anschluss wird an alle Teilnehmer ein Teilnehmer.json sowie Rauminfo.json gesendet.
-
-\todo{passenden titel für \cref{img:mqtt} finden}
+Insgesamt gibt es vier verschiedene Nachrichtentypen, welche zwischen den Teilnehmern und dem Host ausgetauscht werden. Alle Nachrichten werden im JSON-Format versendet. Dabei lassen sich die Nachrichten in zwei Gruppen unterteilen. Die Nachrichten \textit{anmeldung.json} und \textit{abmeldung.json} werden vom Teilnehmer an den Host gesendet. \textit{teilnehmer.json} und \textit{rauminfo.json} sendet der Host an alle Teilnehmer. Mittels eines Converters werden die entsprechenden JSON-Objekte erzeugt und wieder in verwendbare Datentypen zurück gewandelt. Zum Identifizieren eines Nachrichtentyps wird (warum auch immer..) nicht das Typfeld benutzt. 
+Das Identifizieren wird mit den folgenden Schlüsselworten durchgeführt.
+\begin{description}
+\item[•] ENTERTIME (\textit{anmeldung.json})
+\item[•] EXITTIME (\textit{abmeldung.json})
+\item[•] RAUM (\textit{rauminfo.json})
+\item[•] TEILNEHMERLIST (\textit{teilnehmer.json})
+\end{description}
+Abhängig von dem empfangen Datentyp werden unterschiedliche Aktionen durchgeführt.
+\\
+Mit der in \cref{lst:anmeldung} dargestellten \textit{anmeldung.json} meldet sich ein Teilnehmer beim Host an und stellt eine Verbindung zu der entsprechenden Topic her. In der Nachricht sind alle relevanten Informationen des Teilnehmers enthalten sowie die Uhrzeit wann er den Raum betreten hat. Der MQTT-Service konvertiert die erhaltene JSON-Nachricht mittels der \textit{AdapterJsonMqtt} Klasse in den passenden Datentyp. Das erhalte \textit{ParticipantItem} Objekt wird in der Datenbanktabelle \textit{dbParticipant} mit der  entsprechenden RaumId abgespeichert. Die entsprechende RaumId kann der Topic entnommen werden, über welche die JSON-Nachricht empfangen wurde. Im Anschluss wird an alle Teilnehmer ein \textit{teilnehmer.json} sowie \textit{rauminfo.json} gesendet.
 \begin{figure}
 	\centering
 	\includegraphics[width =0.8\textwidth]{images/mqttservice.pdf}
-	\caption{Darstellung des MQTT Topics.}
+	\caption{Darstellung des grundlegenden Kommunikationsablaufes mit MQTT-Topics.}
 	\label{img:mqtt}
 \end{figure}
+Die Nachricht \textit{abmeldung.json}, dargestellt in \cref{lst:abmeldung},   sendet der Teilnehmer an den Host, sobald er den Raum verlässt. Dabei meldet sich der Teilnehmer ebenfalls von der entsprechen Topic der MQTT-Verbindung ab. Analog zum \textit{anmelden.json} enthält diese Nachricht alle wichtigen Informationen über den Teilnehmer sowie die Uhrzeit zu welcher er den Raum verlässt. Im MQTT-Service wird mithilfe des erzeugten \textit{ParticipantItem} Objekt und der RaumId die Exittime des dazugehörenden Teilnehmers aktualisiert.  
 
-Die Nachricht abmeldung.json dargestellt in \cref{lst:abmeldung}   sendet der Teilnehmer an den Gastgeber sobald er den Raum verlässt. Dabei meldet sich der Teilnehmer ebenfalls von der entsprechen raum topic der MQTT Verbindung ab. Analog zum anmelden.json enthält diese Nachricht alle wichtigen Informationen über den Teilnehmer sowie die Uhrzeit zu welcher er den Raum verlässt. Im MQTT Service wird mithilfe des erzeugten Teilnehmer Objektes und der RaumID die Exittime des dazugehörenden Teilnehmers aktualisiert.  
+\cref{lst:rauminfo} stellt die Nachricht vom Typ \textit{rauminfo.json} da. Diese Nachricht enthält sämtliche Informationen über einen Raum. Jede vom Teilnehmer empfange \textit{rauminfo.json} wird in ein \textit{RoomItem} Objekt konvertiert und in die Datenbanktabelle \textit{dbRoom} eingefügt bzw. aktualisiert den bereits vorhanden Eintrag. Wenn der Host eine \textit{rauminfo.json} versendet, welche den Teilnehmern mitteilt, dass der Raum nun geschlossen ist, meldet der MQTT-Service den Host automatisch von der entsprechenden MQTT-Topic ab.
 
-\cref{lst:rauminfo} stellt die Nachricht vom Tye Rauminfo.JSON da. Diese Nachricht enthalten sämtliche Informationen über einen Raum. Jede Vom Teilnehmer Empfangen Rauminfo.json wird in ein RaumObjcet konvertiert und in die Datenbank Tabelle dbRoom eingefügt bzw. aktualisiert den bereits vorhanden Eintrag. Wenn der Gastgeber eine RAuminfo.json versendet welche den Teilnehmern mitteilt das derRuam nun geschlossen ist meldet der MQTT ervice den Gastgeber automatisch von der entsprechden MQTT Topic ab.
-
-Der in \cref{lst:teilnehmer} dargestellte Nachrichtentype Teilnehmer.JSON beinhaltet eine Liste aller Teilnehmer eines Raumes. Bei Empfangen der Nachricht wird das darin enthaltene JSONArray in eine Liste von Participants Konvertiert. Die Participants der Liste werden mit der Entsprechend RaumID welche über die Topic ermittelbar ist in die Datenbanktabelle dbParticipants eingefügt. Um zu verhindern das Teilnehmer mehrfach eingetragen werden wird die anzahlt der Bereits früher eingefügten Teilnehmer des raumes ermittelt. Aus der Liste der erhaltenen Teilnehmer werden nur participants eingefügt welche einen mindestens gleich großen Index besitzen wie die ermittelte anzahlt. Diese Variante funktioniert da sich die Reihenfolge der Teilnehmer sich in der Datenbank nie ändert.
+Der in \cref{lst:teilnehmer} dargestellte Nachrichtentyp \textit{teilnehmer.json} beinhaltet eine Liste aller Teilnehmer eines Raumes. Bei Empfangen der Nachricht wird das darin enthaltene JSON-Array in eine Liste von \textit{ParticipantItems} konvertiert. Die \textit{ParticipantItems} der Liste werden mit der entsprechenden RaumId, welche über die Topic ermittelbar ist, in die Datenbanktabelle \textit{dbParticipants} eingefügt. Um zu verhindern, dass Teilnehmer mehrfach eingetragen werden, wird die Anzahl der bereits eingetragenen Teilnehmer des Raumes ermittelt. Aus der Liste der erhaltenen Teilnehmer werden nur \textit{ParticipantItems} eingefügt, welche einen mindestens gleich großen Index besitzen wie die ermittelte Anzahl. Diese Variante funktioniert, da sich die Reihenfolge der Teilnehmer in den Datenbanktabellen von Host und Teilnehmer nie ändert.
 
 \begin{minipage}[t]{0.45\linewidth}
 \begin{lstlisting}[language=json, label={lst:anmeldung}, caption={anmeldung.json}]
@@ -139,7 +145,7 @@ Der in \cref{lst:teilnehmer} dargestellte Nachrichtentype Teilnehmer.JSON beinha
 \end{minipage}
 \qquad
 \begin{minipage}[t]{0.45\linewidth}
-\begin{lstlisting}[language=json, label={lst:teilnehmer}, caption={teilnehmer.JSON}]
+\begin{lstlisting}[language=json, label={lst:teilnehmer}, caption={teilnehmer.json}]
 {
  "TYPE": "TEILNEHMER",
  "TEILNEHMERLIST": [
