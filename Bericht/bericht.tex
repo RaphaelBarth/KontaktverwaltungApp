@@ -1,6 +1,6 @@
 \sloppy
 \section{Beschreibung}
-\todo{einheitliche schreib weise für klassen namen evtl. kursive}
+\todo{klassen werden kursiv geschrieben }
 \label{sec:Allgemeine Beschreibung}
 \section{Architektur}
 \label{sec:Architektur}
@@ -33,6 +33,7 @@ Ein Raum hat drei mögliche Zustände:
  Jede Sekunde wird also überprüft ob Räume die geschlossen sind geöffnet werden sollen, ob Räume die sich öffnen werden geöffnet werden können und ob Räume die geöffnet sind geschlossen werden sollten. 
 Falls noch Teilnehmer in zu schließenden Räumen sind werden Sie rausgeworfen. In der Datenbank wird dann für alle Teilnehmer als Austrittszeitpunkt die Timeout-Zeit des Raums eingetragen. 
 Auf der Teilnehmerseite reagiert der Observer auf die Änderung des Raumstatuses und beendet den Raum auch real für den Teilnehmer.
+
 \section{RoomTag - QR und NFC}
 \label{sec:RoomTag - QR und NFC}
 Damit Räume distinktiv sind besitzen Sie einen Identifier. Dieser nennt sich Room-Tag und ist zusammengesetzt aus dem Raumnamen, der Email-Adresse des Hosts und der Id des Raums in der Datenbank der Hostdatei. Beispiel für einen Room-Tags: Vorlesung 1/dozent@hs-mannheim.de/0.
@@ -48,14 +49,14 @@ Ein Schreiben des NFC Codes auf einen NFC Sticker ist nicht implemenentiert.
 Eine URI sollte nicht vergeben werden, da der Scanner nicht drauf reagieren würde.
 
 Im Laufe der Entwicklung definierten wir fest, dass ein Veranstalter seinen eigenen Raum nicht betreten dürfte. Außerdem sollte ein Teilnehmer, nachdem er eine Sitzung verlassen hatte, nicht wieder erneut teilnehmen dürfen. Damit wurden irreführende Einträge in der Auswertung vermieden. Dieses Verhalten wird mit der Methode checkEnterPeriomission in der Activity\_11\_EnterViaQrNfc abgefangen.
-\subsection{Betreten über QR}
+\subsubsection*{Betreten über QR}
 \label{subsec: Betreten über QR}
 Wünscht der Teilnehmer über QR einzutreten, dann wird in der Activity\_11\_EnterViaQrNfc die Funktion callScanner() aus der QrCodeManager-Klasse gerufen. Dort wird die Scanner-Activitiy aus zxing gestartet, die einen Rückgabewert liefert. Es ist auch möglich den Scanner zu vorkonfigurieren, so, dass z.B. immer der Kamerablitz angeschaltet ist um auch bei schlechten Licht-Bedingungen den QR-Code gut zu erkennen. 
 Außerdem kann ein Timeout eingestellt werden, falls der Nutzer den QR Code in einer gewissen Zeit nicht einscanned.
 In unserem Projekt wurde sich aber wegen der Benutzerfreundlichkeit gegen diese Konfiguration entschieden.
 Der Scanner wird über einen Intent gestartet und liefert wenn er fertig ist ein Ergebnis zurück.
 Dieses wird in der Methode onActivityResult verarbeitet. Wenn der Scan geklappt hat wird die Methode enterRoom() aufgerufen. Dort werden die Daten des Room-Tags in die Datenbank eingetragen und die Activity\_14\_RoomParticipantDetail gestartet. Der Teilnehmer hört dort dann auf das korrekte MQTT Topic. Er hat den Raum betreten.
-\subsection{Betreten über NFC}
+\subsubsection*{Betreten über NFC}
 \label{subsec: Betreten über NFC}
 Wünscht der Teilnehmer über QR einzutreten, dann wird in der Activity\_11\_EnterViaQrNfc die Funktion armNFCAdapter() aufgerufen. Es wird überprüft ob das Smartphone überhaupt einen NFC Sensor hat.
 Falls das erfüllt ist wird dieser auf events des Types ACTION\_NDEF\_DISCOVERED scharfgeschaltet. 
