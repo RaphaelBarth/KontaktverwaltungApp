@@ -175,6 +175,32 @@ Der in \cref{lst:teilnehmer} dargestellte Nachrichtentyp \textit{teilnehmer.json
 \label{sec:MQTT Service}
 \section{Datenbank}
 \label{sec:Datenbank}
+
+\begin{table}[]
+\caption{Struktur der Datenbanktabelle dbParticipant}
+\label{tab:dbParticipant}
+\centering
+\resizebox{0.6\textwidth}{!}{%
+\begin{tabular}{l|l|l|l|l|l|l|l}
+\toprule
+\textbf{id} & \textbf{name}    & \textbf{extra} & \textbf{eMail} & \textbf{phone} & \textbf{roomId} & \textbf{enterTime} & \textbf{exitTime} \\ \midrule
+1           & \begin{tabular}[c]{@{}l@{}}Max\\ Mustermann\end{tabular} & null           & mm@mail.de     & 123456789      & 1               & 0                  & 0                 \\ \bottomrule
+\end{tabular}%
+}
+\end{table}
+
+
+\begin{table}[]
+\caption{Struktur der Datenbanktabelle dbRoom}
+\label{tab:dbRoom}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{l|l|l|l|l|l|l|l|l|l|l|l}
+\toprule
+\textbf{id} & \textbf{fremdId} & \textbf{roomName} & \textbf{status}                                                                                      & \textbf{host}                                            & \textbf{eMail} & \textbf{phone} & \textbf{place}                                              & \textbf{address} & \textbf{extra} & \textbf{enterTime} & \textbf{exitTime} \\ \midrule
+1           & null             & MusterRaum        & 1 (ROOMISCLOSE)  & \begin{tabular}[c]{@{}l@{}}Max\\ Mustermann\end{tabular} & mm@mail.de     & +123456789     & \begin{tabular}[c]{@{}l@{}}12345\\ Musterstadt\end{tabular} & Musterstr. 1     & null           & 0                  & 0                 \\ \bottomrule
+\end{tabular}%
+}
+\end{table}
 \section{Fazit}
 \label{sec:Fazit}
 Die Anwendung ermöglicht eine effiziente, einfache Möglichkeit dezentral und mit wenig Ressourcen eine Kontaktverfolgung umzusetzen.
