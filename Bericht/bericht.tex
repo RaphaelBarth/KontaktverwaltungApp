@@ -1,0 +1,237 @@
+\sloppy
+\section{Einleitung}
+\label{sec:Einleitung}
+In der COVID-19-Pandemie sind Veranstaltungen häufig mit mehreren Teilnehmern mit einem erhöhten Infektionsrisiko verbunden, gerade in geschlossenen Räumen.
+Häufig besteht an die Veranstalter eine Pflicht Ein- und Austrittszeitpunkt aller Teilnehmer individuell festzuhalten um im Falle einer nachträglich auftretenden Infektion die Kontaktverfolgung für die Gesundheitsämter möglichst effizient zu gestalten.
+Eine Verwaltung mit Papierformularen ist mit einem hohen Digitalisierungsaufwand verbunden.
+Die App Kontaktverfolgung versucht dieses Problem zu lösen.
+
+In der App kann eine Nutzerin oder ein Nutzer die Rolle eines Hosts, also eines Gastgebers oder eines Teilnehmers einnehmen. Jeder Nutzer hat ein Profil bestehend aus: Name, E-Mail und Telefonnummer.
+Hosts erstellen Räume die an eine reale Adresse gebunden sind. Teilnehmer können dann per NFC-Tag oder einen QR Code in diesen Raum eintreten. Ein und Austrittszeitpunkte werden erfasst und in der Datenbank vermerkt.
+Die Ein- und Austrittszeitpunkte der Räume können als PDF exportiert werden.
+Nach 14 Tagen werden die Daten aus der Datenbank gelöscht.
+\section{Architektur}
+\label{sec:Architektur}
+\section{PDF}
+\label{sec:PDF}
+Das System soll dem Nutzer die Möglichkeit bieten Informationen über einen Raum als PDF zu teilen. Dabei gibt es zwei unterschiedliche PDF‘s, diese beinhalten die generellen Rauminformationen, sowie den dazugehörigen QR-Code oder eine Liste aller Teilnehmer.
+Das Android-Framework  verfügt über eine \textit{PdfDocument} Klasse, die zum Erstellen von PDF‘s genutzt wird. Für eine A4 Seite nach DIN Norm ergeben sich die Werte 846x594 Pixel. Näheres zur Berechnung der Pixelwerte ist unter \href{https://developer.android.com/reference/android/graphics/pdf/PdfDocument.PageInfo}{developer.android} zu finden. Die erstellte Seite wird mittels eines Canvas editiert. Die Formatierung  der Texte und Grafikelemente lassen sich über die \textit{Paint} Klasse einstellen.
+Das erstellte PdfDokument wird im externen Dateiverzeichnis der App abgespeichert. Der Nutzer besitzt bei einem fehlgeschlagenen Teilen somit trotzdem die Möglichkeit auf das erstellte PDF zuzugreifen.
+Um das PDF zu teilen, wird ein FileProvider verwendet, welcher im Manifest deklariert ist.  Der FileProvider bietet dem Nutzer eine Auswahl der installierten Anwendungen, über welche er das PDF teilen kann.
+
+Für die nächste Version der App muss das PDF mit der Übersicht aller Teilnehmer überarbeitet werden. In der aktuellen Version wird die E-Mail Adresse ab einer bestimmten Länge zum Teil mit in die nächste Spalte geschrieben. Ziel ist es, dass ab einer bestimmten Länge ein automatischer Zeilenumbruch in der entsprechenden Spalte stattfindet.
+
+\section{RoomLifecycleService}
+\label{sec:RoomLifecycleService}
+Der RoomLifecycleService steuert, wie der Name bereits andeutet, in welchem Zustand sich Räume befinden. Der Zustand bestimmt sich maßgeblich nach Öffnungs und Schließzeit. Diese sind abhängig von der lokalen Zeit. Ein Raum soll ab einer gewissen Uhrzeit geöffnet und zu einer gewissen Uhrzeit geschlossen werden. Der LifecycleService gleicht also immer wieder ab, ob ein Raum gerade geöffnet oder geschlossen sein sollte.
+Er wird im Host und Teilnehmer-Modus benötigt. 
+Die Entscheidung fiel auf einen Service, weil die App auch im nicht-geöffneten Zustand auf Timeouts und Öffnungszeiten reagieren sollte.
+Beispiel: Der Host eröffnet einen Raum und wechselt die App oder sperrt das Smartphone. Wenn die Kontaktverfolgungsapp nun nicht mehr im Vordergrund ist während das Timeout ausläuft oder der Raum in die Öffnungszeit reinrutscht, dann würde er nicht geschlossen respektive geöffnet werden. 
+Um also zu vermeiden, dass der Host über die gesamte Zeit sein Smartphone nicht verwenden kann und das Display immer angeschaltet bleiben muss, was mit einem hohen Stromverbrauch verbunden ist, fiel die Entscheidung auf einen Service.
+
+Wird der Service gestartet, wird die Raumüberprüfungsroutine nebenläufig in einem neuen Thread gestartet. Das nimmt die Last vom Hauptthread. Der Raumstatus wird jede Sekunde mit einem Busy-Wait-Algorithmus überprüft. Das sollte man nicht in den Hauptthread auslagern, da er diesen unnötig blockiert. 
+Der Datenbankzugriff ist also nicht die Ursache für die Designentscheidung, denn der Zugriff wird im Repository ohnehin nebenläufig realisiert.
+Im Thread überprüfen wird überprüft ob aktuell geschlossene Räume geöffnet und aktuell geöffnete Räume geschlossen werden sollten.
+Nebenher wird im Mainthread versucht den MQTT-Service zu einzubinden. Denn der Host soll natürlich auf die Topics aller Räume hören offen sind bzw. aufhören auf alle Räume zu hören die geschlossen sind.
+Außerdem muss der Host den Teilnehmern die Raumeigenschaften und den Öffnungsstatus beim Öffnen mitteilen. Der MQTT-Service wird hier also gebraucht um den Teilnehmern Raumstatusänderungen mitzuteilen.
+Zurück zum LifeCycleService.
+Ein Raum hat drei mögliche Zustände:
+\begin{enumerate}
+\item Wird sich öffnen
+\item Geöffnet
+\item Geschlossen
+\end{enumerate}
+ Jede Sekunde wird also überprüft ob Räume die geschlossen sind geöffnet werden sollen, ob Räume die sich öffnen werden geöffnet werden können und ob Räume die geöffnet sind geschlossen werden sollten. 
+Falls noch Teilnehmer in zu schließenden Räumen sind werden Sie rausgeworfen. In der Datenbank wird dann für alle Teilnehmer als Austrittszeitpunkt die Timeout-Zeit des Raums eingetragen. 
+
+\section{RoomTag - QR und NFC}
+\label{sec:RoomTag - QR und NFC}
+Damit Räume distinktiv sind besitzen Sie einen Identifier. Dieser nennt sich Room-Tag und ist zusammengesetzt aus dem Raumnamen, der Email-Adresse des Hosts und der Id des Raums in der Datenbank der Hostdatei. Beispiel für einen Room-Tags: Vorlesung 1/dozent@hs-mannheim.de/0.
+Teilnehmer benötigen diesen Tag um dem Raum beizutreten. Dies können Sie über NFC oder über einen QR-Code durchführen. Eine manuelle Eingabe ist nicht implementiert.
+
+Um den Tag weiterzugeben kann der Veranstalter nach dem erstellen des Raumes ein PDF generieren und per E-Mail versenden. 
+Das passiert in der Methode shareRoom() in der Klasse Activity\_22\_RoomHostDetail. 
+In einem solchen PDF ist neben Raum-Metadaten wie Titel, Start und End-Zeitpunkt auch ein QR-Code über den die Teilnehmer beitreten können. 
+Für die Erstellung wird die externe Bibliothek zxing von journeyapps benutzt. Die Anbindung erfolgt die Klasse \textit{BarcodeEncoder} in der Klasse \textit{QRCodeManager}.
+
+Ein Schreiben des NFC Codes auf einen NFC Sticker ist nicht implemenentiert.
+ Apps wie NFC Tools des Unternehmens wakdev aus dem PlayStore schaffen hier aber Abhilfe. Dort kann der Tag in Plaintext-Format auf den NFC Tag geschrieben werden.
+Eine URI sollte nicht vergeben werden, da der Scanner nicht drauf reagieren würde.
+
+Im Laufe der Entwicklung definierten wurde fest definiert, dass ein Veranstalter seinen eigenen Raum nicht betreten dürfte.
+ Außerdem sollte ein Teilnehmer, nachdem er eine Sitzung verlassen hatte, nicht wieder erneut teilnehmen dürfen. 
+ Damit wurden irreführende Einträge in der Auswertung vermieden. Dieses Verhalten wird mit der Methode checkEnterPeriomission in der Activity\_11\_EnterViaQrNfc abgefangen.
+\subsection{Betreten über QR}
+\label{subsec: Betreten über QR}
+Wünscht der Teilnehmer über QR einzutreten, dann wird in der Activity\_11\_EnterViaQrNfc die Funktion callScanner() aus der QrCodeManager-Klasse gerufen. Dort wird die Scanner-Activitiy aus zxing gestartet, die einen Rückgabewert liefert. Es ist auch möglich den Scanner zu vorkonfigurieren, so, dass z.B. immer der Kamerablitz angeschaltet ist um auch bei schlechten Licht-Bedingungen den QR-Code gut zu erkennen. 
+Außerdem kann ein Timeout eingestellt werden, falls der Nutzer den QR Code in einer gewissen Zeit nicht einscanned.
+In unserem Projekt wurde sich aber wegen der Benutzerfreundlichkeit gegen diese Konfiguration entschieden.
+Der Scanner wird über einen Intent gestartet und liefert wenn er fertig ist ein Ergebnis zurück.
+Dieses wird in der Methode onActivityResult verarbeitet. Wenn der Scan geklappt hat wird die Methode enterRoom() aufgerufen. Dort werden die Daten des Room-Tags in die Datenbank eingetragen und die Activity\_14\_RoomParticipantDetail gestartet. Der Teilnehmer hört dort dann auf das korrekte MQTT Topic. Er hat den Raum betreten.
+\subsection{Betreten über NFC}
+\label{subsec: Betreten über NFC}
+Wünscht der Teilnehmer über QR einzutreten, dann wird in der Activity\_11\_EnterViaQrNfc die Funktion armNFCAdapter() aufgerufen. Es wird überprüft ob das Smartphone überhaupt einen NFC Sensor hat.
+Falls das erfüllt ist wird dieser auf events des Types ACTION\_NDEF\_DISCOVERED scharfgeschaltet. 
+Man sagt auch er ist im Foreground-Dispatch-Modus.
+Das bedeutet dass, wenn ein neues NFC Tag detektiert wurde, ein gewisser Intent gestartet wird. 
+Falls das der Fall ist, wird die gleiche Activity\_11\_EnterViaQrNfc noch einmal gestartet allerdings mit der Action NFC\_INTENT\_ACTION. 
+In der onResume() wird überprüft ob diese Action gesetzt ist, denn nur dann kehrt die Anwendung ja aus dem NFC-Intent zurück. 
+In den Extras des NFC-Intents befindet sich dann er abgelesene Room-Tag. Der Ablauf danach ist wie beim Betreten über QR. enterRoom() wird gerufen und Activity\_14\_RoomParticipantDetail wird gestartet.
+\section{MQTT-Service}
+Der MQTT-Service stellt die MQTT-Funktionalität bereit, über welche die App mit anderen Smartphones kommuniziert.
+Das Starten und Stoppen des MQTT-Service findet in der \textit{Activity\_00\_StartActivity} statt. Alle anderen Activities binden lediglich den MQTT-Service. Das Binden des MQTT-Service findet in  \textit{Activity\_11\_EnterViaNfcQr}, \textit{Activity\_14\_RoomParticipantsDetails} und \textit{Activity\_22\_RoomHostDetails} statt. Des Weiteren wird der Service in dem RoomLivecycle-Service gebunden. Näheres hierzu unter \cref{sec:RoomLifecycleService}.  Beim Verwenden des MQTT-Service wird in jeder Activity geprüft, ob dieser schon gebunden ist (not null). Ist dies nicht der Fall, wird das zu sendende Objekt zwischengespeichert und bei erfolgreichem Binden verarbeitet. 
+Die im MQTT-Service implementierten Methoden sind ausführlich mittels \href{https://scm.inftech.hs-mannheim.de/gogs/moa/20moagm/src/dev/Doku/javadoc}{JavaDoc} erklärt. 
+
+Die Kommunikation zwischen dem Host und den Teilnehmern verläuft beim MQTT-Protokoll über sogenannte Topics. Für einen Raum werden, wie \cref{img:mqtt} zeigt, immer zwei Topics benötigt. Der Teilnehmer kann einem Raum über die Topic \textit{moagm/Room-Tag} beitreten. Der Host sendet die nötigen Informationen für die Teilnehmer über die Topic \textit{moagm/Room-Tag/public} an alle Teilnehmer. Durch die Trennung der Kanäle wird verhindert, dass Teilnehmer die Nachrichten, welche von anderen Teilnehmern an den Host gesendet werden, empfangen können.
+
+Insgesamt gibt es vier verschiedene Nachrichtentypen, welche zwischen den Teilnehmern und dem Host ausgetauscht werden. Alle Nachrichten werden im JSON-Format versendet. Dabei lassen sich die Nachrichten in zwei Gruppen unterteilen. Die Nachrichten \textit{anmeldung.json} und \textit{abmeldung.json} werden vom Teilnehmer an den Host gesendet. \textit{teilnehmer.json} und \textit{rauminfo.json} sendet der Host an alle Teilnehmer. Mittels eines Converters werden die entsprechenden JSON-Objekte erzeugt und wieder in verwendbare Datentypen zurück gewandelt. Zum Identifizieren eines Nachrichtentyps wird (warum auch immer..) nicht das Typfeld benutzt. 
+Das Identifizieren wird mit den folgenden Schlüsselworten durchgeführt.
+\begin{description}
+\item[•] ENTERTIME (\textit{anmeldung.json})
+\item[•] EXITTIME (\textit{abmeldung.json})
+\item[•] RAUM (\textit{rauminfo.json})
+\item[•] TEILNEHMERLIST (\textit{teilnehmer.json})
+\end{description}
+Abhängig von dem empfangen Datentyp werden unterschiedliche Aktionen durchgeführt.
+\\
+Mit der in \cref{lst:anmeldung} dargestellten \textit{anmeldung.json} meldet sich ein Teilnehmer beim Host an und stellt eine Verbindung zu der entsprechenden Topic her. In der Nachricht sind alle relevanten Informationen des Teilnehmers enthalten sowie die Uhrzeit wann er den Raum betreten hat. Der MQTT-Service konvertiert die erhaltene JSON-Nachricht mittels der \textit{AdapterJsonMqtt} Klasse in den passenden Datentyp. Das erhalte \textit{ParticipantItem} Objekt wird in der Datenbanktabelle \textit{dbParticipant} mit der  entsprechenden RaumId abgespeichert. Die entsprechende RaumId kann der Topic entnommen werden, über welche die JSON-Nachricht empfangen wurde. Im Anschluss wird an alle Teilnehmer ein \textit{teilnehmer.json} sowie \textit{rauminfo.json} gesendet.
+\begin{figure}
+	\centering
+	\includegraphics[width =0.8\textwidth]{images/mqttservice.pdf}
+	\caption{Darstellung des grundlegenden Kommunikationsablaufes mit MQTT-Topics.}
+	\label{img:mqtt}
+\end{figure}
+Die Nachricht \textit{abmeldung.json}, dargestellt in \cref{lst:abmeldung},   sendet der Teilnehmer an den Host, sobald er den Raum verlässt. Dabei meldet sich der Teilnehmer ebenfalls von der entsprechen Topic der MQTT-Verbindung ab. Analog zum \textit{anmelden.json} enthält diese Nachricht alle wichtigen Informationen über den Teilnehmer sowie die Uhrzeit zu welcher er den Raum verlässt. Im MQTT-Service wird mithilfe des erzeugten \textit{ParticipantItem} Objekt und der RaumId die Exittime des dazugehörenden Teilnehmers aktualisiert.  
+
+\cref{lst:rauminfo} stellt die Nachricht vom Typ \textit{rauminfo.json} da. Diese Nachricht enthält sämtliche Informationen über einen Raum. Jede vom Teilnehmer empfange \textit{rauminfo.json} wird in ein \textit{RoomItem} Objekt konvertiert und in die Datenbanktabelle \textit{dbRoom} eingefügt bzw. aktualisiert den bereits vorhanden Eintrag. Wenn der Host eine \textit{rauminfo.json} versendet, welche den Teilnehmern mitteilt, dass der Raum nun geschlossen ist, meldet der MQTT-Service den Host automatisch von der entsprechenden MQTT-Topic ab.
+
+Der in \cref{lst:teilnehmer} dargestellte Nachrichtentyp \textit{teilnehmer.json} beinhaltet eine Liste aller Teilnehmer eines Raumes. Bei Empfangen der Nachricht wird das darin enthaltene JSON-Array in eine Liste von \textit{ParticipantItems} konvertiert. Die \textit{ParticipantItems} der Liste werden mit der entsprechenden RaumId, welche über die Topic ermittelbar ist, in die Datenbanktabelle \textit{dbParticipants} eingefügt. Um zu verhindern, dass Teilnehmer mehrfach eingetragen werden, wird die Anzahl der bereits eingetragenen Teilnehmer des Raumes ermittelt. Aus der Liste der erhaltenen Teilnehmer werden nur \textit{ParticipantItems} eingefügt, welche einen mindestens gleich großen Index besitzen wie die ermittelte Anzahl. Diese Variante funktioniert, da sich die Reihenfolge der Teilnehmer in den Datenbanktabellen von Host und Teilnehmer nie ändert.
+
+\begin{minipage}[t]{0.45\linewidth}
+\begin{lstlisting}[language=json, label={lst:anmeldung}, caption={anmeldung.json}]
+{
+ "TYPE": "LOGOUT",
+ "TEILNEHMER": {
+	"NAME": "",
+	"EXTRA": "",
+	"EMAIL": "",
+	"PHONE": ""},
+ "EXITTIME": 0
+}
+\end{lstlisting}
+\end{minipage}
+\qquad
+\begin{minipage}[t]{0.45\linewidth}
+\begin{lstlisting}[language=json,label={lst:abmeldung}, caption={abmeldung.json}]
+{
+ "TYPE": "LOGIN",
+ "TEILNEHMER": {
+	"NAME": "",
+	"EXTRA": "",
+	"EMAIL": "",
+	"PHONE": ""},
+ "ENTERTIME": "0"
+}
+\end{lstlisting}
+\end{minipage}
+\\
+\begin{minipage}[t]{0.45\linewidth}
+\begin{lstlisting}[language=json, label={lst:rauminfo}, caption={rauminfo.json}]
+{
+ "TYPE": "RAUMINFO",
+ "RAUM": {
+	"ID": 0,
+	"ROOMNAME": "",
+	"STATUS": "",
+	"HOST": "",
+	"EMAIL": "",
+	"PHONE": "",
+	"PLACE": "",
+	"ADDRESS": "",
+	"EXTRA": "",
+	"ROOMSTARTTIME": 0,
+	"ROOMENDTIME": 0}
+}
+\end{lstlisting}
+\end{minipage}
+\qquad
+\begin{minipage}[t]{0.45\linewidth}
+\begin{lstlisting}[language=json, label={lst:teilnehmer}, caption={teilnehmer.json}]
+{
+ "TYPE": "TEILNEHMER",
+ "TEILNEHMERLIST": [
+	{
+	 "NAME": "",
+	 "EXTRA": "",
+ 	 "EMAIL": "",
+ 	 "PHONE": "",
+ 	 "ENTERTIME": 0,
+	 "EXITTIME": 0},
+	...
+ ]
+}
+\end{lstlisting}
+\end{minipage}
+\label{sec:MQTT Service}
+\section{Datenbank}
+\label{sec:Datenbank}
+
+\begin{table}[]
+\caption{Struktur der Datenbanktabelle dbParticipant}
+\label{tab:dbParticipant}
+\centering
+\resizebox{0.6\textwidth}{!}{%
+\begin{tabular}{l|l|l|l|l|l|l|l}
+\toprule
+\textbf{id} & \textbf{name}    & \textbf{extra} & \textbf{eMail} & \textbf{phone} & \textbf{roomId} & \textbf{enterTime} & \textbf{exitTime} \\ \midrule
+1           & \begin{tabular}[c]{@{}l@{}}Max\\ Mustermann\end{tabular} & null           & mm@mail.de     & 123456789      & 1               & 0                  & 0                 \\ \bottomrule
+\end{tabular}%
+}
+\end{table}
+
+
+\begin{table}[]
+\caption{Struktur der Datenbanktabelle dbRoom}
+\label{tab:dbRoom}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{l|l|l|l|l|l|l|l|l|l|l|l}
+\toprule
+\textbf{id} & \textbf{fremdId} & \textbf{roomName} & \textbf{status}                                                                                      & \textbf{host}                                            & \textbf{eMail} & \textbf{phone} & \textbf{place}                                              & \textbf{address} & \textbf{extra} & \textbf{enterTime} & \textbf{exitTime} \\ \midrule
+1           & null             & MusterRaum        & 1 (ROOMISCLOSE)  & \begin{tabular}[c]{@{}l@{}}Max\\ Mustermann\end{tabular} & mm@mail.de     & +123456789     & \begin{tabular}[c]{@{}l@{}}12345\\ Musterstadt\end{tabular} & Musterstr. 1     & null           & 0                  & 0                 \\ \bottomrule
+\end{tabular}%
+}
+\end{table}
+\section{Fazit}
+\label{sec:Fazit}
+Die Anwendung ermöglicht eine effiziente, einfache Möglichkeit dezentral und mit wenig Ressourcen eine Kontaktverfolgung umzusetzen.
+Sie erfüllt die Grundsätze der Datenminimierung, Zweckbindung, Richtigkeit und Speicherbegrenzung der DSGVO. Nutzerdaten werden nur auf den Endgeräten gespeichert. 
+Sie werden nur gespeichert, sollte ein Teilnehmer oder ein Host auch wirklich Kontakt mit diesem Nutzer gehabt haben. 
+Des weiteren werden alle Einträge die älter als 14 Tage sind aus der Datenbank gelöscht.
+
+In der Entwicklung konnten die in der Vorlesung gelehrten Inhalte nocheinmal selbstständig angewandt werden. 
+Auch verschiedene Nutzungsweisen des Versionsverwaltungstools git konnten getestet werden. 
+Am Anfang wurde hauptsächlich auf einem Branch enwickelt, später wurde auf ein Feature-Based-Setup gewechselt in dem jeder Entwickler einen eigenen Branch pro Freature hatten. 
+Zum Schluss wurde sich für einen dev-branch für experimentelle Änderungen und einen master-branch für stabile Versionen entschieden, da dies gerade für die Demos sehr von Vorteil war.
+
+Das Entwickler-Team war stets motiviert. Aufgaben wurden termingerecht und zuverlässig erledigt.
+Fragen und Probleme wurden im Plenum behandelt.
+Bei sehr komplizierten Problemen wurde der Dozent konsultiert.
+Teambesprechungen erfolgten meist über Jitsi.
+Für die Aufgabenverwaltung wurde eine Mischung aus dem "Issue"-Aufgabenverwaltungstool von Gogs und Todos im Code verwendet.
+\section{Ausblick}
+\label{sec:Ausblick}
+Mögliche Features im Bereich NFC wären die Beschreibung eines Tags aus der App heraus, um so auf Drittanbieter-Apps verzichten zu können. 
+Außerdem wäre eine manuelle Uri sinnvoll. So würde der NFC Scannern nicht auf jeden Tag reagieren, sondern nur auf solche die er auch beschrieben hat. 
+Ein weiteres Feature wäre es manuell den Room-Tag eines Raumes einzugeben um ihn zu betreten. Diese Möglichkeit gibt es momentan noch nicht.
+
+Ein anderes Feature wäre die Implementierung eines optionalen Profilbildes im Nutzerprofil.
+
+Im Falle einer Infektion werden Nutzer bisher noch nicht benachrichtigt. Auch das wäre wünschenswert.
+
+Das MQTT-Protokoll war für den Nachrichtenaustausch etwas suboptimal. Es kam vereinzelt vor dass Nachrichten bei manchen Teilnehmern nicht ankahmen. Auch kamen manche Nachrichten vom Host nicht bei Teilnehmern an. Die Implementierung einer Art Empfangsbestätigung wäre von Vorteil.
+
+Sonstiges
+Die App ist in der Lage bei einem Verlust der Internetverbindung dem Nutzer ein Feedback mitzuteilen und ein hartes Abbrechen zu verhindern. Dafür wird ein BroadcastReciever verwendet welcher Auf Netzwerkänderungen hört. Der BroadcastReciver wird beim Erstellen des RommLivecyclesServices an diesen gebunden. Bricht die Internetverbindung weg werden alle Services gestoppt. Des Weiteren wird dem Nutzer mitgeteilt das die Internetverbindung verloren wurde und er muss die App mit einer bestehen Internetverbindung neu starten muss.
+
+Sämtliche benötigten Informationen über den Nutzer der App werden mittels Preferences erfasst. Ohne das vollständige Ausfüllen der Preferences ist in Verwenden der App nicht möglich. Um später einen eleganten Zugriff auf die Preferences zu erhalten ist eine MySelf Klasse implementiert.
+
