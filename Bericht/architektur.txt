@@ -8,5 +8,7 @@ Wird eine neue Veranstaltung erzeugt aktiviert sich der RoomLifeCycle-Service, j
 Möchte sich nun ein Nutzer der Veranstaltung anzuschließen, kann er per NFC-Tag oder QR-Code beitreten. 
 Wurde das Room-Tag erkannt werden mittels Mqtt-Service die Nutzerdaten aus der Daten-bank gelesen an den Host übermittelt. 
 Dieser erhält dann einen neuen Eintrag in seiner Teilnehmerlis-te mit dem Namen und der Eintritt Zeit des Teilnehmers.
- Ist die Zeit des Timeouts abgelaufen, wird entweder ein Raum eröffnet oder geschlossen. 
+Ist die Zeit des Timeouts abgelaufen, wird entweder ein Raum eröffnet oder geschlossen. 
 Im geschlossenen Zustand können keine Teilnehmer mehr beitreten und die vorhandenen werden mittels Mqtt-Service entfernt. 
+
+Die genaueren Funktionsweisen des LifeCycleService, Mqtt-Server und SQL-Lite Datenbank werden in den folgenden Kapiteln erläutert.
