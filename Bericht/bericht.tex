@@ -31,18 +31,24 @@ Um also zu vermeiden, dass der Host über die gesamte Zeit sein Smartphone nicht
 
 Wird der Service gestartet, wird die Raumüberprüfungsroutine nebenläufig in einem neuen Thread gestartet. Das nimmt die Last vom Hauptthread. Der Raumstatus wird jede Sekunde mit einem Busy-Wait-Algorithmus überprüft. Das sollte man nicht in den Hauptthread auslagern, da er diesen unnötig blockiert. 
 Der Datenbankzugriff ist also nicht die Ursache für die Designentscheidung, denn der Zugriff wird im Repository ohnehin nebenläufig realisiert.
-Im Thread überprüfen wird überprüft ob aktuell geschlossene Räume geöffnet und aktuell geöffnete Räume geschlossen werden sollten.
-Nebenher wird im Mainthread versucht den MQTT-Service zu einzubinden. Denn der Host soll natürlich auf die Topics aller Räume hören offen sind bzw. aufhören auf alle Räume zu hören die geschlossen sind.
+Im Thread wird überprüft ob aktuell geschlossene Räume geöffnet und aktuell geöffnete Räume geschlossen werden sollten.
+Nebenher wird im Mainthread versucht den MQTT-Service zu einzubinden. Denn der Host soll natürlich auf die Topics aller Räume hören die offen sind bzw. aufhören auf alle Räume zu hören die geschlossen sind.
 Außerdem muss der Host den Teilnehmern die Raumeigenschaften und den Öffnungsstatus beim Öffnen mitteilen. Der MQTT-Service wird hier also gebraucht um den Teilnehmern Raumstatusänderungen mitzuteilen.
+Dabei ruft der RoomLifecycleService die Methoden des MQTT Services nicht direkt auf. Die gesamte Überprüfung der Raumzustände erfolgt nebenläufig in einem anderen Thread. 
+Es kann also vorkommen, dass der Thread schon über den MQTT Service Raumänderungen versendet obwohl er eigentlich noch nicht gebunden ist. In dem Fall kommt es zu einer Exception.
+Deshalb haben wir einen Handler eingeführt. Der Thread schreibt in eine threadsichere Liste die Räume rein, die ihren Zustand geändert haben und über MQTT versendet werden sollen. 
+Ist der MQTT-Service im Hauptthread gebunden, dann arbeitet besagter Handler mit der Methode \textit{postPendingRooms()} diese Räume im Hauptthread ab. 
+Dadurch ist stets sichergestellt, dass der MQTT-Service nur Räume erhält wenn er gebunden ist. Das hätte man einfach vermeiden können, indem man statt zwei, einen einzigen Service genommen hätte. So hätte man gar nicht auf das Binden warten müssen.
+
 Zurück zum LifeCycleService.
 Ein Raum hat drei mögliche Zustände:
 \begin{enumerate}
-\item Wird sich öffnen
-\item Geöffnet
-\item Geschlossen
+\item ROOMISCLOSE
+\item ROOMISOPEN
+\item ROOMWILLOPEN
 \end{enumerate}
  Jede Sekunde wird also überprüft ob Räume die geschlossen sind geöffnet werden sollen, ob Räume die sich öffnen werden geöffnet werden können und ob Räume die geöffnet sind geschlossen werden sollten. 
-Falls noch Teilnehmer in zu schließenden Räumen sind werden Sie rausgeworfen. In der Datenbank wird dann für alle Teilnehmer als Austrittszeitpunkt die Timeout-Zeit des Raums eingetragen. 
+Falls noch Teilnehmer in zu schließenden Räumen eingebucht sind werden Sie rausgeworfen. In der Datenbank wird dann für alle Teilnehmer als Austrittszeitpunkt die Timeout-Zeit des Raums eingetragen.
 
 \section{RoomTag - QR und NFC}
 \label{sec:RoomTag - QR und NFC}
@@ -70,11 +76,11 @@ Der Scanner wird über einen Intent gestartet und liefert wenn er fertig ist ein
 Dieses wird in der Methode onActivityResult verarbeitet. Wenn der Scan geklappt hat wird die Methode enterRoom() aufgerufen. Dort werden die Daten des Room-Tags in die Datenbank eingetragen und die Activity\_14\_RoomParticipantDetail gestartet. Der Teilnehmer hört dort dann auf das korrekte MQTT Topic. Er hat den Raum betreten.
 \subsection{Betreten über NFC}
 \label{subsec: Betreten über NFC}
-Wünscht der Teilnehmer über QR einzutreten, dann wird in der Activity\_11\_EnterViaQrNfc die Funktion armNFCAdapter() aufgerufen. Es wird überprüft ob das Smartphone überhaupt einen NFC Sensor hat.
-Falls das erfüllt ist wird dieser auf events des Types ACTION\_NDEF\_DISCOVERED scharfgeschaltet. 
+Wünscht der Teilnehmer über einen NFC-Tag einzutreten, dann wird in der \textit{Activity\_11\_EnterViaQrNfc} die Funktion \textit{armNFCAdapter()} aufgerufen. Es wird überprüft ob das Smartphone überhaupt einen NFC Sensor hat.
+Falls das erfüllt ist wird dieser auf events des Types ACTION\_NDEF\_DISCOVERED scharfgeschaltet, also wenn ein neues Tag detektiert wurde.
 Man sagt auch er ist im Foreground-Dispatch-Modus.
 Das bedeutet dass, wenn ein neues NFC Tag detektiert wurde, ein gewisser Intent gestartet wird. 
-Falls das der Fall ist, wird die gleiche Activity\_11\_EnterViaQrNfc noch einmal gestartet allerdings mit der Action NFC\_INTENT\_ACTION. 
+Falls das der Fall ist, wird die gleiche \textit{Activity\_11\_EnterViaQrNfc} noch einmal gestartet allerdings mit der Action NFC\_INTENT\_ACTION. 
 In der onResume() wird überprüft ob diese Action gesetzt ist, denn nur dann kehrt die Anwendung ja aus dem NFC-Intent zurück. 
 In den Extras des NFC-Intents befindet sich dann er abgelesene Room-Tag. Der Ablauf danach ist wie beim Betreten über QR. enterRoom() wird gerufen und Activity\_14\_RoomParticipantDetail wird gestartet.
 \section{MQTT-Service}
@@ -217,7 +223,7 @@ Das Entwickler-Team war stets motiviert. Aufgaben wurden termingerecht und zuver
 Fragen und Probleme wurden im Plenum behandelt.
 Bei sehr komplizierten Problemen wurde der Dozent konsultiert.
 Teambesprechungen erfolgten meist über Jitsi.
-Für die Aufgabenverwaltung wurde eine Mischung aus dem "Issue"-Aufgabenverwaltungstool von Gogs und Todos im Code verwendet.
+Für die Aufgabenverwaltung wurde eine Mischung aus dem ``Issue''-Aufgabenverwaltungstool von Gogs und Todos im Code verwendet.
 \section{Ausblick}
 \label{sec:Ausblick}
 Mögliche Features im Bereich NFC wären die Beschreibung eines Tags aus der App heraus, um so auf Drittanbieter-Apps verzichten zu können. 
