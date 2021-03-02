@@ -1,0 +1,21 @@
+Datenbank 
+Die Datenbank wird als Speichermedium verwendet, um langfristig Information über Objekt zu halten. 
+Über Entitys werden die Tabellenstrukturen bzw. die zu speichernden Daten festgelegt, welche in der Applikation durch die Participantitem und Roomitem umgesetzt wurden. 
+Die Participantitem ist für die Verwaltung der Nutzerinformationen von Teilnehmern und Host zuständig.
+ Wird die App gestartet müssen in den Preference Angaben über den Namen, Extra, E-Mail und die Telefonnummer eintragen, welche dann in einer Participantitem Instanz gekapselt werden. 
+Die Attribute RoomID und Entertime erhalten erst beim Betreten einer Veranstaltung einen fixen Wert. Kommt es nun zur Schließung eines Events, können mittels RoomID die dazugehörigen Teilnehmer ermittelt werden. 
+Diese erhalten an-schließend eine Exittime und werden aus dem Event entfernt.
+Die Tabellenstruktur der Events wird über die Roomitem realisiert. 
+Beim Erzeugen einer Veranstaltung muss der Eventname, Name des Veranstalters, Ort der Veranstaltung, Zeitraum und Status gespeichert werden. 
+Der Status gibt an in welchem aktuellen Zustand sich das Event befindet, hierbei wird zwi-schen „Wird sich öffnen“, „geöffnet“ oder „Geschlossen“ unterschieden.
+Da Hosts auch die Rolle eines Teilnehmers einnehmen können, wurde hierfür das Feld der FremdID eingeführt. 
+Ist das Attribut bei einer Roomitem Instanz initialisiert, wurde dieses Event von einer ande-ren Person erstellt und man wird als Teilnehmer gelistet.
+Weil Datenmanipulationen und Zugriffe nicht im Hauptthread stattfinden dürfen, werden im Reposi-tory (Klasse welche Funktionen des Data Access Objects implementiert) alle Datenbankaufrufe in ei-nem Hintergrundthread gestartet.
+Die Ausnahme bilden die Funktionen mit der Endung Now. 
+Da bei diesen keine Livedata zurückgeben und nur für nebenläufige Prozesse genutzt werden. 
+Dürfen diese nur anderen Thread verwendet werden. Endet eine Funktion mit dem Suffix Own, werden über diese nur eigens erstellte Veranstaltungen wiedergegeben.
+ Dies wird vor allem beim Versenden der Topic per Mqtt-Service benötigt, da wir Teilnehmer nur selbst erstellten Events teilnehmen lassen.
+Da der Lebenszyklus der Activites eine große Rolle bei der Verwendung von Datenbanken spielt wird die LiveData-Klasse verwendet, um diesen außer Acht lassen zu können. 
+Im Gegensatz zu einem nor-malen Observablen, bietet die LiveData den großen Vorteil, dass sie Lebenszyklusbewusst arbeitet, d. h. es berücksichtigt den Lebenszyklus anderer App-Komponenten.
+ Befindet sich nun ein Observer in einem aktiven Zustand STARTED oder RESUMED, wird diese von Livedata benachrichtigt und aktuali-siert. 
+Dadurch werden keine Probleme mehr mit dem Lebenszyklus und Memory-Leaks verursacht.
