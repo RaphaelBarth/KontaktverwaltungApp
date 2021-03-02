@@ -28,7 +28,7 @@ Geht der Status des Events, wird von Host mittels MQTT-Service die Nachricht an 
 jene werden anschließend aus dem Event entfernt und der Raum wird geschlossen.  
 \begin{figure}
 	\centering
-	\includegraphics[width =0.8\textwidth]{images/DomaenenModel.pdf}
+	\includegraphics[width =0.9\textwidth]{images/DomaenenModel.pdf}
 	\caption{Grundlegendes Domänenmodel der entwickelten App.}
 	\label{img:dmodel}
 \end{figure}
@@ -103,9 +103,9 @@ Dadurch ist stets sichergestellt, dass der MQTT-Service nur Räume erhält wenn 
 Zurück zum LifeCycleService.
 Ein Raum hat drei mögliche Zustände:
 \begin{enumerate}
-\item ROOMISCLOSE
-\item ROOMISOPEN
 \item ROOMWILLOPEN
+\item ROOMISOPEN
+\item ROOMISCLOSE
 \end{enumerate}
  Jede Sekunde wird also überprüft ob Räume die geschlossen sind geöffnet werden sollen, ob Räume die sich öffnen werden geöffnet werden können und ob Räume die geöffnet sind geschlossen werden sollten. 
 Falls noch Teilnehmer in zu schließenden Räumen eingebucht sind werden Sie rausgeworfen. In der Datenbank wird dann für alle Teilnehmer als Austrittszeitpunkt die Timeout-Zeit des Raums eingetragen.
@@ -133,7 +133,7 @@ Abhängig von dem empfangen Datentyp werden unterschiedliche Aktionen durchgefü
 Mit der in \cref{lst:anmeldung} dargestellten \textit{anmeldung.json} meldet sich ein Teilnehmer beim Host an und stellt eine Verbindung zu der entsprechenden Topic her. In der Nachricht sind alle relevanten Informationen des Teilnehmers enthalten sowie die Uhrzeit wann er den Raum betreten hat. Informationen über einen Teilnehmer können den Preferences über die \textit{MySelfe} Klasse entnommen werden. Der MQTT-Service konvertiert die erhaltene JSON-Nachricht mittels der \textit{AdapterJsonMqtt} Klasse in den passenden Datentyp. Das erhalte \textit{ParticipantItem} Objekt wird in der Datenbanktabelle \textit{dbParticipant} mit der  entsprechenden RaumId abgespeichert. Die entsprechende RaumId kann der Topic entnommen werden, über welche die JSON-Nachricht empfangen wurde. Im Anschluss wird an alle Teilnehmer ein \textit{teilnehmer.json} sowie \textit{rauminfo.json} gesendet.
 \begin{figure}
 	\centering
-	\includegraphics[width =0.8\textwidth]{images/mqttservice.pdf}
+	\includegraphics[width =0.9\textwidth]{images/mqttservice.pdf}
 	\caption{Darstellung des grundlegenden Kommunikationsablaufes mit MQTT-Topics.}
 	\label{img:mqtt}
 \end{figure}
@@ -225,22 +225,21 @@ Für die Erstellung wird die externe Bibliothek zxing von journeyapps benutzt. D
 
 Ein Schreiben des NFC Codes auf einen NFC Sticker ist nicht implemenentiert.
  Apps wie \href{https://play.google.com/store/apps/details?id=com.wakdev.wdnfc&hl=de&gl=US}{NFC Tools} des Unternehmens wakdev aus dem PlayStore schaffen hier aber Abhilfe. Dort kann der Tag in Plaintext-Format auf den NFC Tag geschrieben werden.
-Eine URI sollte nicht vergeben werden, da der Scanner nicht drauf reagiert.
-
+Eine URI soll nicht vergeben werden, da der Scanner nicht drauf reagiert.
 Im Laufe der Entwicklung  wurde fest definiert, dass ein Veranstalter seinen eigenen Raum nicht betreten dürfte.
  Außerdem sollte ein Teilnehmer, nachdem er eine Sitzung verlassen hatte, nicht wieder erneut teilnehmen dürfen. 
  Damit wurden irreführende Einträge in der Auswertung vermieden. Dieses Verhalten wird mit der Methode \textit{checkEnterPeriomission} in der \textit{Activity\_11\_EnterViaQrNfc} abgefangen.
- 
-\paragraph{Betreten eines Raumes über einen QR-Code.}\mbox{}\\
-\label{paragraph:QR}
-Wünscht der Teilnehmer über QR einzutreten, dann wird in der \textit{Activity\_11\_EnterViaQrNfc} die Funktion \textit{callScanner()} aus der \textit{QrCodeManager} Klasse gerufen. Dort wird die Scanner-Activitiy aus zxing gestartet, die einen Rückgabewert liefert. Es ist auch möglich den Scanner zu vorkonfigurieren, so, dass z.B. immer der Kamerablitz angeschaltet ist um auch bei schlechten Licht-Bedingungen den QR-Code gut zu erkennen. 
+\\ 
+%\subsubsection*{Betreten eines Raumes über einen QR-Code.}
+%\label{paragraph:QR}
+Wünscht der Teilnehmer über einen QR-Code einzutreten, dann wird in der \textit{Activity\_11\_EnterViaQrNfc} die Funktion \textit{callScanner()} aus der \textit{QrCodeManager} Klasse gerufen. Dort wird die Scanner-Activitiy aus zxing gestartet, die einen Rückgabewert liefert. Es ist auch möglich den Scanner zu vorkonfigurieren, so, dass z.B. immer der Kamerablitz angeschaltet ist um auch bei schlechten Licht-Bedingungen den QR-Code gut zu erkennen. 
 Außerdem kann ein Timeout eingestellt werden, falls der Nutzer den QR-Code in einer gewissen Zeit nicht einscanned.
 In unserem Projekt wurde sich aber wegen der Benutzerfreundlichkeit gegen diese Konfiguration entschieden.
 Der Scanner wird über einen Intent gestartet und liefert wenn er fertig ist ein Ergebnis zurück.
-Dieses wird in der Methode \textit{onActivityResult} verarbeitet. Wenn der Scan geklappt hat wird die Methode \textit{enterRoom()} aufgerufen. Dort werden die Daten des Room-Tags in die Datenbank eingetragen und die \textit{Activity\_14\_RoomParticipantDetail} gestartet. Der Teilnehmer hört dort dann auf das korrekte MQTT-Topic. Er hat den Raum betreten.
-\paragraph{Betreten eines Raumes über ein NFC-Torken}\mbox{}\\
-\label{paragraph:NFC}
-Wünscht der Teilnehmer über QR einzutreten, dann wird in der \textit{Activity\_11\_EnterViaQrNfc} die Funktion \textit{armNFCAdapter()} aufgerufen. Es wird überprüft ob das Smartphone überhaupt einen NFC Sensor hat.
+Dieses wird in der Methode \textit{onActivityResult} verarbeitet. Wenn der Scan geklappt hat wird die Methode \textit{enterRoom()} aufgerufen. Dort werden die Daten des Room-Tags in die Datenbank eingetragen und die \textit{Activity\_14\_RoomParticipantDetail} gestartet. Der Teilnehmer hört dort dann auf das korrekte MQTT-Topic. Er hat den Raum betreten.\\
+%\subsubsection*{Betreten eines Raumes über ein NFC-Torken}
+%\label{paragraph:NFC}
+Wünscht der Teilnehmer über NFV einzutreten, dann wird in der \textit{Activity\_11\_EnterViaQrNfc} die Funktion \textit{armNFCAdapter()} aufgerufen. Es wird überprüft ob das Smartphone überhaupt einen NFC Sensor hat.
 Falls das erfüllt ist wird dieser auf events des Types ACTION\_NDEF\_DISCOVERED scharfgeschaltet. 
 Man sagt auch er ist im Foreground-Dispatch-Modus.
 Das bedeutet dass, wenn ein neues NFC-Tag detektiert wurde, ein gewisser Intent gestartet wird. 
@@ -255,37 +254,42 @@ In den Extras des NFC-Intents befindet sich dann er abgelesene Room-Tag. Der Abl
 \label{sec:PDF}
 Das System soll dem Nutzer die Möglichkeit bieten Informationen über einen Raum als PDF zu teilen. Dabei gibt es zwei unterschiedliche PDF‘s, diese beinhalten die generellen Rauminformationen, sowie den dazugehörigen QR-Code oder eine Liste aller Teilnehmer.
 Das Android-Framework  verfügt über eine \textit{PdfDocument} Klasse, die zum Erstellen von PDF‘s genutzt wird. Für eine A4 Seite nach DIN Norm ergeben sich die Werte 846x594 Pixel. Näheres zur Berechnung der Pixelwerte ist unter \href{https://developer.android.com/reference/android/graphics/pdf/PdfDocument.PageInfo}{developer.android} zu finden. Die erstellte Seite wird mittels eines Canvas editiert. Die Formatierung  der Texte und Grafikelemente lassen sich über die \textit{Paint} Klasse einstellen.
-Das erstellte PdfDokument wird im externen Dateiverzeichnis der App abgespeichert. Der Nutzer besitzt bei einem fehlgeschlagenen Teilen somit trotzdem die Möglichkeit auf das erstellte PDF zuzugreifen.
+Das erstellte PDF-Dokument wird im externen Dateiverzeichnis der App abgespeichert. Der Nutzer besitzt bei einem fehlgeschlagenen Teilen somit trotzdem die Möglichkeit auf das erstellte PDF zuzugreifen.
 Um das PDF zu teilen, wird ein FileProvider verwendet, welcher im Manifest deklariert ist.  Der FileProvider bietet dem Nutzer eine Auswahl der installierten Anwendungen, über welche er das PDF teilen kann.
 
-Für die nächste Version der App muss das PDF mit der Übersicht aller Teilnehmer überarbeitet werden. In der aktuellen Version wird die E-Mail Adresse ab einer bestimmten Länge zum Teil mit in die nächste Spalte geschrieben. Ziel ist es, dass ab einer bestimmten Länge ein automatischer Zeilenumbruch in der entsprechenden Spalte stattfindet.
 
-\section{Sonstiges und Ausblick}
-\label{sec:FuZ}
+
+\section{Sonstiges}
+\label{sec:sonstiges}
 Die Anwendung ermöglicht eine effiziente, einfache Möglichkeit dezentral und mit wenig Ressourcen eine Kontaktverfolgung umzusetzen.
 Sie erfüllt die Grundsätze der Datenminimierung, Zweckbindung, Richtigkeit und Speicherbegrenzung der Datenschutz Grundverordnung. Nutzerdaten werden nur auf den Endgeräten gespeichert. 
 Sie werden nur gespeichert, sollte ein Teilnehmer oder ein Host auch wirklich Kontakt mit diesem Nutzer gehabt haben. 
-Des weiteren werden alle Einträge die älter als 14 Tage sind aus der Datenbank gelöscht.
+Des weiteren werden alle Einträge die älter als 14 Tage sind aus der Datenbank gelöscht.\\
 Die App ist in der Lage bei einem Verlust der Internetverbindung dem Nutzer ein Feedback mitzuteilen und ein hartes Abbrechen zu verhindern. Dafür wird ein BroadcastReciever verwendet welcher Auf Netzwerkänderungen hört. Der BroadcastReciver wird beim Erstellen des RoomLivecyclesServices an diesen gebunden. Bricht die Internetverbindung weg werden alle Services gestoppt. Des Weiteren wird dem Nutzer mitgeteilt das die Internetverbindung verloren wurde und er muss die App mit einer bestehen Internetverbindung neu starten muss.
 
-
+\section{Fazit und Ausblick}
+\label{sec:FuA}
 
 In der Entwicklung konnten die in der Vorlesung gelehrten Inhalte nocheinmal selbstständig angewandt werden. 
-Auch verschiedene Nutzungsweisen des Versionsverwaltungstools git konnten getestet werden. 
+Auch verschiedene Nutzungsweisen des Versionsverwaltungstools Git konnten getestet werden. 
 Am Anfang wurde hauptsächlich auf einem Branch enwickelt, später wurde auf ein Feature-Based-Setup gewechselt in dem jeder Entwickler einen eigenen Branch pro Freature hatten. 
 Zum Schluss wurde sich für einen dev-branch für experimentelle Änderungen und einen master-branch für stabile Versionen entschieden, da dies gerade für die Demos sehr von Vorteil war.
 
+Für eine Weiterentwicklung der App sind essenziellen Verbesserungen vorzunehmen. Die Services MQTT-Service und RoomLivecycleService müssen in einem einzigen Service zusammengefasst werden. Dadurch lässt sich die Fehlerrate welche beim Binden des MQTT-Services entstehen deutlich minimieren. Das zusammen fassen verringert zudem deutlich die gesamt Komplexität des Projektes.
+ Ebenso muss in der \textit{PdfClass} das PDF mit der Übersicht aller Teilnehmer überarbeitet werden. In der aktuellen Version wird die E-Mail Adresse ab einer bestimmten Länge zum Teil mit in die nächste Spalte geschrieben. Ziel ist es, dass ab einer bestimmten Länge ein automatischer Zeilenumbruch in der entsprechenden Spalte stattfindet.
+Neben den essenziellen Verbesserungen  wäre eine Implementierung von neuen Features  optional.
+\begin{description}
+\item[•]beschreiben von NFC-Torkens  aus der App heraus ohne Drittanbieter-App 
+\item[•]Profilbild in den Nutzerinformationen
+\item[•] benachrichtigen aller Teilnehmer bei positivem Corona Befund
+\item[•]Desweiteren wäre eine manuelle Uri sinnvoll. So würde der NFC Scannern nicht auf jeden Tag reagieren, sondern nur auf solche die er auch beschrieben hat.\todo{@marius bessere erklären}
+\item[•]manuell eingabe des Room-Tag um einen Raum zu betreten
+\item[•]Chat zwischen Teilnehmern eines Raumes
+\item[•]Unittests unter Verwendung der \textit{TestClass} implementieren
+\end{description}
 
-Mögliche Features im Bereich NFC wären die Beschreibung eines Tags aus der App heraus, um so auf Drittanbieter-Apps verzichten zu können. 
-Außerdem wäre eine manuelle Uri sinnvoll. So würde der NFC Scannern nicht auf jeden Tag reagieren, sondern nur auf solche die er auch beschrieben hat. 
-Ein weiteres Feature wäre es manuell den Room-Tag eines Raumes einzugeben um ihn zu betreten. Diese Möglichkeit gibt es momentan noch nicht.
 
-Ein anderes Feature wäre die Implementierung eines optionalen Profilbildes im Nutzerprofil.
-
-Im Falle einer Infektion werden Nutzer bisher noch nicht benachrichtigt. Auch das wäre wünschenswert.
-
-Das MQTT-Protokoll war für den Nachrichtenaustausch etwas suboptimal. Es kam vereinzelt vor dass Nachrichten bei manchen Teilnehmern nicht ankahmen. Auch kamen manche Nachrichten vom Host nicht bei Teilnehmern an. Die Implementierung einer Art Empfangsbestätigung wäre von Vorteil.
-
+Eine Verbesserte Version der Kontaktverfolgung App lässt sich ideal in der Hochschule einsetzen. ...\todo{1-2 sätze warum}
 
 
 
