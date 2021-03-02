@@ -12,3 +12,21 @@ Ist die Zeit des Timeouts abgelaufen, wird entweder ein Raum eröffnet oder gesc
 Im geschlossenen Zustand können keine Teilnehmer mehr beitreten und die vorhandenen werden mittels Mqtt-Service entfernt. 
 
 Die genaueren Funktionsweisen des LifeCycleService, Mqtt-Server und SQL-Lite Datenbank werden in den folgenden Kapiteln erläutert.
+
+
+Aritechtur: Neuer findet ich besser :D
+Im Wesentlichen besteht die Architektur der Applikation aus den Bereichen Activites, RoomLifeCycle-Service, Mqtt-Server und einer SQL-Lite Datenbank.
+ In den Activitys werden den zuvor beschrieben Widgets ihre Funktionen zugewiesen und bilden somit das Userinterface.
+ Möchte sich ein Nutzer re-gistrieren werden dessen Daten über die Activitys aufgenommen und an die interne Datenbank wei-tergeleitet. 
+Diese dient zur Speicherung von Nutzerdaten als auch von Veranstaltungsinformationen. 
+Möchte sich nun ein Nutzer einer Veranstaltung anzuschließen, kann dieser per NFC-Tag oder QR-Code beitreten.
+ Wurde das Room-Tag erkannt, werden mittels Mqtt-Service die Nutzerdaten aus der Daten-bank übermittelt an den Host.
+ Dieser erhält einen neuen Eintrag in seiner Teilnehmerliste.
+Veranstaltungen werden durch den RoomLifeCycleService überwacht. Der RoomLifeCycleService ent-hält einen Timer welcher den Lebenszyklus eines Events steuert. 
+Läuft das Timeout ab, verändert sich der Eventstatuts in „geschlossen“. 
+Für den Datenaustausch zwischen Host und Teilnehmer kommt der Mqtt-Service zum Einsatz. 
+Verlässt ein Teilnehmer frühzeitig ein Event so wird dieser in der Teilnehmerliste des Host vermerkt und erhält eine Exittime in seinen Nutzerdaten. 
+Geht der Status des Events, wird von Host mittels Mqtt-Service die Nachricht an die Teilnehmer weitergeleitet, 
+jene werden anschließend aus dem Event entfernt und der Raum wird geschlossen.  
+
+Die genaueren Funktionsweisen des LifeCycleService, Mqtt-Server und SQL-Lite Datenbank werden in den folgenden Kapiteln erläutert.
