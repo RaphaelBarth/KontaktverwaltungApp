@@ -279,10 +279,15 @@ a4paper,     %% defines the paper size: a4paper (default), a5paper, letterpaper,
 %%% include the title
 \thispagestyle{empty}  %% no header/footer (only) on this page
  \maketitle
-\thispagestyle{empty}
+ \thispagestyle{empty}
+
+ \newpage
+\section*{Zusammenfassung}
+Die folgende Dokumentation gibt einen Überblick über den Aufbau der Kontaktverfolgung-App. Diese wurde im Rahmen des Studienfaches Mobile Anwendungen entwickelt. In der Dokumentation werden die wichtigsten Komponenten in ihrer Funktion erläutert. Um die App erfolgreich weiter entwickeln zu können ist es Voraussetzung die Grundlagen des Android-Frameworks zu kennen.
 %%% start a new page and display the table of contents
 % \newpage
 \setcounter{tocdepth}{1}
+ \thispagestyle{empty}
  \tableofcontents
 
 %%% start a new page and display the list of figures
