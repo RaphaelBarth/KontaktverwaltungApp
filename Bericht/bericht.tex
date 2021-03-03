@@ -10,28 +10,22 @@ In der App kann eine Nutzerin oder ein Nutzer die Rolle eines Hosts, also eines 
  Jeder Nutzer hat ein Profil bestehend aus: Name, E-Mail und Telefonnummer.
 Hosts erstellen Räume die an eine reale Adresse gebunden sind. Teilnehmer können dann per NFC-Tag oder einen QR Code in diesen Raum eintreten. Ein und Austrittszeitpunkte werden erfasst und in der Datenbank vermerkt.
 Die Ein- und Austrittszeitpunkte der Räume können als PDF exportiert werden.
-Nach 14 Tagen werden die Daten aus der Datenbank gelöscht. \todo{doppet steht am ende auch nochmal}
-\section{Architektur}\todo{längere namen ? (allgemeiner auf bau der App)}
-\label{sec:Architektur}
-Im Wesentlichen besteht die Architektur der Applikation aus den in \cref{img:dmodel} dargestellten Komponenten. 
-Diese sind verschiedene Activites, RoomLifeCycleService, MQTT-Server eine SQL-Lite Datenbank sowie Preferences.\\
+\section{Allgemeiner Aufbau der App}
+\label{sec:AadA}
+Im Wesentlichen besteht der Aufbau der App aus den in \cref{img:dmodel} dargestellten Activites, dem RoomLifeCycleService, dem MQTT-Service, einer SQL-Lite Datenbank sowie den Preferences. 
 Sämtliche benötigten Informationen über den Nutzer der App werden mittels Preferences erfasst. 
-Ohne das vollständige Ausfüllen der Preferences ist in Verwenden der App nicht möglich. 
+Ohne das vollständige Ausfüllen der Preferences ist ein Verwenden der App nicht möglich. 
 Um später einen eleganten Zugriff auf die Preferences zu erhalten ist eine \textit{MySelf} Klasse implementiert. 
-In den Activitys werden den  verwendeten Widgets ihre Funktionen zugewiesen und bilden somit das Userinterface.
- Möchte sich ein Nutzer registrieren werden dessen Daten über die Activitys aufgenommen und an die interne Datenbank weitergeleitet. 
-Diese dient zur Speicherung von Nutzerdaten als auch von Veranstaltungsinformationen. 
-Möchte ein Nutzer kann per NFC-Tag oder QR-Code einer Veranstaltung beitreten.
- \todo{wenn ein nutzer einer veranstaltung beitritt geschiet dies per NFC-Tag oder QR-Code}
-\todo{NFC-Tag oder NFC-Torken}
-Wurde der Room-Tag 
-\todo{was ist der raum tag ??wurde vorher nicht erklärt weglassen ??} erkannt, werden mittels MQTT-Service die Nutzerdaten aus der Datenbank  an den Host übermittelt.
- Dieser erhält einen neuen Eintrag in seiner Teilnehmerliste.
-Veranstaltungen werden durch den RoomLifeCycleService überwacht. Der RoomLifeCycleService enthält einen Timer welcher den Lebenszyklus eines Events steuert. 
-Läuft das Timeout ab, verändert sich der Eventstatuts in „geschlossen“. \todo{vielleicht bissle gröber erklären timer und geschlosen kommen in \cref{sec:RoomLifecycleService}}
+In den Activitys werden den verwendeten Widgets ihre Funktionen zugewiesen und bilden somit das Userinterface. 
 Für den Datenaustausch zwischen Host und Teilnehmer kommt der MQTT-Service zum Einsatz. 
-Verlässt ein Teilnehmer frühzeitig ein Event, so wird das in der Teilnehmerliste des Hosts vermerkt. Die Exittime wird auch lokal bei Ihm übernommen. 
-Schließt der Host den Raum, oder läuft das Timeout des Raumes ab, werden alle Teilnehmer aus dem Event entfernt und die aktuelle Zeit als Austrittszeit eingetragen. \todo{alles schon etwas Funktionalität}
+Verändert sich der Status eines Events oder eines Teilnehmers, werden über den MQTT-Service die Datenbanken der anderen Teilnehmer/Host aktualisiert. 
+Hierbei übernimmt die Datenbank die Speicherung von Nutzerdaten und von den Veranstaltungsinformationen. 
+Die Teilnahme einer Veranstaltung kann per NFC-Tag oder das Abscannen eines QR-Codes erfolgen. 
+Wird ein Room-Tag erkannt, werden die hinterlegten Daten aus der Klasse \textit{MySelf} gelesen über den MQTT-Service an die Datenbank des Host übermittelt. 
+Genauere Informationen über den Room-Tag sind in \cref{sec:RoomLifecycleService} zu finden.
+Veranstaltungen werden durch den LifeCycleService überwacht. Der RoomLifeCycleService ent-hält einen Timer welcher den Lebenszyklus eines Events steuert. 
+Ändert sich der Lebenszyklus des Events, wird die Datenbank aktualisiert und die entsprechenden Teilnehmer über den MQTT-Service benachrichtigt. 
+Die genaueren Funktionsweisen des LifeCycleService, MQTT-Server und SQL-Lite Da-tenbank werden in den folgenden Kapiteln erläutert.
 \begin{figure}
 	\centering
 	\includegraphics[width =0.9\textwidth]{images/DomaenenModel.pdf}
@@ -49,9 +43,10 @@ In der Applikation werden die Tabellenstrukturen durch die Klassen \textit{Parti
  \cref{tab:dbParticipant} zeigt die Struktur der entsprechenden Datenbanktabelle \textit{dbParticipant}.
  Wird die App gestartet müssen in den Preference Angaben über den Namen, Extra, E-Mail und die Telefonnummer eintragen sein, welche dann in einer Participantitem Instanz gekapselt werden. 
 \todo{mySelf wird nur in Participant umgewandelt wenn man in ein raum eintritt}
-Die Attribute RoomID 
-\todo{was genau ist die RaumID(fremdschlüssel auf ein bestimmtes RoomItem in der tabele in welchem sich der Teilnehmer bevindet)} und Entertime erhalten erst beim Betreten einer Veranstaltung einen fixen Wert. Kommt es nun zur Schließung eines Events, können mittels RoomID die dazugehörigen Teilnehmer ermittelt werden. 
-Diese erhalten anschließend eine Exittime und werden aus dem Event entfernt. \todo{entfernt werden se ja ned stehn immer noch in der tabelle}\\
+Die Attribute RoomID und Entertime erhalten erst beim Betreten einer Veranstaltung einen fixen Wert. 
+Die RoomId ist ein Fremdschlüssel auf ein \textit{RoomItem }in der \textit{dbRoom}.
+Kommt es nun zur Schließung eines Events, können mittels RoomID die dazugehörigen Teilnehmer ermittelt werden. 
+Diese erhalten anschließend eine Exittime.\\
 Die Tabellenstruktur der Events wird über die \textit{RoomItem} realisiert. Der Aufbau der Tabelle \textit{dbRoom} ist in \cref{tab:dbRoom} dargestellt. 
 Beim Erzeugen einer Veranstaltung muss der Eventname, Name des Veranstalters, Ort der Veranstaltung, Zeitraum und Status gespeichert werden. 
 Der Status gibt an in welchem aktuellen Zustand sich das Event befindet, hierbei wird zwischen „ROOMWILLOPEN“, „ROOMISOPEN“ oder „ROOMISCLOSE“ unterschieden.
@@ -61,9 +56,9 @@ Weil Datenmanipulationen und Zugriffe nicht im Hauptthread stattfinden dürfen, 
 Die Ausnahme bilden die Funktionen mit der Endung Now. 
 Da bei diesen keine Livedata zurückgeben wird dürfen Sie nur für nebenläufige Threads genutzt werden. 
 Endet eine Funktion mit dem Suffix Own, werden über diese nur eigens erstellte Veranstaltungen zurückgegeben.
-Dies wird vor allem im \textit{RoomLifeCycleService} verwendet damit Teilnehmer nicht, auch wenn es richtig sein sollte, erst bei sich und dann bei den anderen Teilnehmern den Raumstatus z.B. auf ROOMISCLOSE setzen. \todo{komplizierter satz}
- Die Authorität Räume zu öffnen, zu schließen oder das Timeout zu verändern ist allein dem Host vorbehalten.
- Eine genauere Dokumentation der einzelnen Funktionen ist im JavaDoc zu finden.
+Dies wird vor allem im \textit{RoomLifeCycleService} verwendet damit Teilnehmer nicht selbst Räume öffnen oder schließen können.
+Der Host regelt die Öffnungs- und Schlißzeiten seiner Räume.
+Eine genauere Dokumentation der einzelnen Funktionen ist im JavaDoc zu finden.
 Da der Lebenszyklus der Activites bei der Verwendung von Datenbanken eine große Rolle  spielt, wird die LiveData-Klasse verwendet, um diesen außer Acht lassen zu können. 
 
 \begin{table}[]
@@ -92,11 +87,18 @@ Da der Lebenszyklus der Activites bei der Verwendung von Datenbanken eine große
 }
 \end{table}
 
-\section{RoomLifecycleService}\todo{bissle bessere überschrifft ?}
+\section{Steuerung des Eventlebenszyklus}
 \label{sec:RoomLifecycleService}
 Der RoomLifecycleService steuert, wie der Name bereits andeutet, in welchem Zustand sich Räume befinden.
  Der Zustand bestimmt sich maßgeblich nach Öffnungs und Schließzeit.
 Diese sind abhängig von der lokalen Zeit. Ein Raum soll ab einer gewissen Uhrzeit geöffnet und zu einer gewissen Uhrzeit geschlossen werden. 
+Er hat drei mögliche Zustände:
+\begin{description}
+\item[•] ROOMWILLOPEN
+\item[•] ROOMISOPEN
+\item[•] ROOMISCLOSE
+\end{description}
+
 Der LifecycleService gleicht periodisch ab, ob ein Raum gerade geöffnet oder geschlossen sein sollte.
 Er wird sowohl im Host, als auch im Teilnehmer-Modus benötigt. 
 Die Entscheidung fiel auf einen Service, weil die App auch im nicht-geöffneten Zustand auf Timeouts und Öffnungszeiten reagieren sollte.
@@ -121,14 +123,7 @@ Ist der MQTT-Service im Hauptthread gebunden, dann arbeitet besagter Handler mit
 Dadurch ist stets sichergestellt, dass der MQTT-Service nur Räume erhält wenn er gebunden ist. 
 Dieser Workaround wäre vermeidbar gewesen, wäre Statusüberprüfung und Nachrichtenübertragung in einem zentralen Service realisiert worden. So hätte man gar nicht auf das Binden warten müssen.
 
-Zurück zum LifeCycleService. \todo{bissle andere Formulierung ?}
-Ein Raum hat drei mögliche Zustände:
-\begin{enumerate}
-\item ROOMWILLOPEN
-\item ROOMISOPEN
-\item ROOMISCLOSE
-\end{enumerate}
- Jede Sekunde wird nun überprüft ob Räume die geschlossen sind geöffnet werden sollen, ob Räume die sich öffnen werden geöffnet werden können und ob Räume die geöffnet sind geschlossen werden sollten. 
+Jede Sekunde wird nun überprüft ob Räume die geschlossen sind geöffnet werden sollen, ob Räume die sich öffnen werden geöffnet werden können und ob Räume die geöffnet sind geschlossen werden sollten. 
 Falls noch Teilnehmer in zu schließenden Räumen eingebucht sind werden Sie rausgeworfen. In der Datenbank wird dann für alle Teilnehmer als Austrittszeitpunkt die Timeout-Zeit des Raums eingetragen.
 
 
@@ -155,7 +150,7 @@ Dabei lassen sich die Nachrichten in zwei Gruppen unterteilen.
 Die Nachrichten \textit{anmeldung.json} und \textit{abmeldung.json} werden vom Teilnehmer an den Host gesendet. 
 \textit{teilnehmer.json} und \textit{rauminfo.json} sendet der Host an alle Teilnehmer. 
 Mittels eines Converters werden die entsprechenden JSON-Objekte erzeugt und wieder in verwendbare Datentypen zurück gewandelt. 
-Zum Identifizieren eines Nachrichtentyps wird (warum auch immer..\todo{Wirklich drin lassen? :)}) nicht das Typfeld benutzt. 
+Zum Identifizieren eines Nachrichtentyps wird (warum auch immer..) nicht das Typfeld benutzt. 
 Das Identifizieren wird mit den folgenden Schlüsselworten durchgeführt.
 \begin{description}
 \item[•] ENTERTIME (\textit{anmeldung.json})
@@ -166,7 +161,7 @@ Das Identifizieren wird mit den folgenden Schlüsselworten durchgeführt.
 Abhängig von dem empfangen Datentyp werden unterschiedliche Aktionen durchgeführt.
 \\
 Mit der in \cref{lst:anmeldung} dargestellten \textit{anmeldung.json} meldet sich ein Teilnehmer beim Host an und stellt eine Verbindung zu der entsprechenden Topic her. In der Nachricht sind alle relevanten Informationen des Teilnehmers enthalten sowie die Uhrzeit wann er den Raum betreten hat.
-Informationen über einen Teilnehmer können den Preferences über die \textit{MySelfe} Klasse entnommen werden. 
+Informationen über einen Teilnehmer können den Preferences über die \textit{MySelf} Klasse entnommen werden. 
 Der MQTT-Service konvertiert die erhaltene JSON-Nachricht mittels der \textit{AdapterJsonMqtt} Klasse in den passenden Datentyp. 
 Das erhalte \textit{ParticipantItem} Objekt wird in der Datenbanktabelle \textit{dbParticipant} mit der  entsprechenden RaumId abgespeichert. 
 Die entsprechende RaumId kann der Topic entnommen werden, über welche die JSON-Nachricht empfangen wurde. 
@@ -273,16 +268,15 @@ Teilnehmer benötigen diesen Tag um dem Raum beizutreten. Dies können Sie über
 Um den Room-Tag weiterzugeben kann der Veranstalter nach dem Erstellen des Raumes ein PDF generieren und optional per E-Mail versenden. 
 Das passiert in der Methode \textit{shareRoom()} in der Klasse \textit{Activity\_22\_RoomHostDetail}. 
 In einem solchen PDF ist neben Raum-Metadaten wie Titel, Start und End-Zeitpunkt auch ein QR-Code über den die Teilnehmer beitreten können. 
-Für die Erstellung wird die externe Bibliothek zxing von journeyapps benutzt. Die Anbindung erfolgt die Klasse \textit{BarcodeEncoder} in der Klasse \textit{QRCodeManager}. \todo{unvollständiger satz}
+Für die Erstellung wird die externe Bibliothek zxing von journeyapps benutzt. Die Anbindung erfolgt über die Klasse \textit{BarcodeEncoder} in der Klasse \textit{QRCodeManager}.
 
 Ein Schreiben des Room-Tags auf einen NFC Sticker ist nicht implemenentiert.
  Apps wie \href{https://play.google.com/store/apps/details?id=com.wakdev.wdnfc&hl=de&gl=US}{NFC Tools} des Unternehmens wakdev aus dem PlayStore schaffen hier aber Abhilfe. 
-Dort kann der Tag in Plaintext-Format auf den NFC-Tag 
-\todo{Tag oder Torken} geschrieben werden.
+Dort kann der Tag in Plaintext-Format auf den NFC-Tag geschrieben werden.
 Eine URI soll nicht vergeben werden, da der Scanner nicht drauf reagiert.
 Im Laufe der Entwicklung  wurde fest definiert, dass ein Veranstalter seinen eigenen Raum nicht betreten dürfte.
- Außerdem sollte ein Teilnehmer, nachdem er eine Sitzung verlassen hatte, nicht wieder erneut teilnehmen dürfen. \todo{sollte}
- Damit wurden irreführende Einträge in der Auswertung vermieden. Dieses Verhalten wird mit der Methode \textit{checkEnterPeriomission()} in der \textit{Activity\_11\_EnterViaQrNfc} abgefangen.
+Außerdem darf ein Teilnehmer, nachdem er eine Sitzung verlassen hatte, nicht wieder erneut ihr teilnehmen.
+Damit wurden irreführende Einträge in der Auswertung vermieden. Dieses Verhalten wird mit der Methode \textit{checkEnterPeriomission()} in der \textit{Activity\_11\_EnterViaQrNfc} abgefangen.
 \\ 
 %\subsubsection*{Betreten eines Raumes über einen QR-Code.}
 %\label{paragraph:QR}
@@ -307,7 +301,7 @@ In den Extras des NFC-Intents befindet sich dann er abgelesene Room-Tag. Der Abl
 
 
 
-\section{PDF}\todo{besserer titel}
+\section{Erstellen und Teilen von PDFs}
 \label{sec:PDF}
 Das System soll dem Nutzer die Möglichkeit bieten Informationen über einen Raum als PDF zu teilen. 
 Dabei gibt es zwei unterschiedliche PDF‘s, diese beinhalten die generellen Rauminformationen, sowie den dazugehörigen QR-Code oder eine Liste aller Teilnehmer.
@@ -320,7 +314,7 @@ Um das PDF zu teilen, wird ein FileProvider verwendet, welcher im Manifest dekla
 
 
 
-\section{Sonstiges} \todo{besserer titel}
+\section{Weitere Funktionalitäten}
 \label{sec:sonstiges}
 Die Anwendung ermöglicht eine effiziente, einfache Möglichkeit dezentral und mit wenig Ressourcen eine Kontaktverfolgung umzusetzen.
 Sie erfüllt die Grundsätze der Datenminimierung, Zweckbindung, Richtigkeit und Speicherbegrenzung der Datenschutz Grundverordnung. Nutzerdaten werden nur auf den Endgeräten gespeichert. 
@@ -338,7 +332,8 @@ Des Weiteren wird dem Nutzer mitgeteilt das die Internetverbindung verloren wurd
 In der Entwicklung konnten die in der Vorlesung gelehrten Inhalte nocheinmal selbstständig angewandt werden. 
 Auch verschiedene Nutzungsweisen des Versionsverwaltungstools Git konnten getestet werden. 
 Wo am Anfang hauptsächlich auf einem Branch enwickelt wurde, wurde später wurde auf ein Feature-Based-Setup gewechselt in dem jeder Entwickler einen eigenen Branch pro Freature hatte.
-Zum Schluss wurde sich für einen dev-branch für experimentelle Änderungen und einen master-branch für stabile Versionen entschieden, da dies gerade für die Demos sehr von Vorteil war. \todo{hinzufügen ob die gestellten ziele erreicht wurden oder nicht}
+Zum Schluss wurde sich für einen dev-branch für experimentelle Änderungen und einen master-branch für stabile Versionen entschieden, da dies gerade für die Demos sehr von Vorteil war. 
+Die wichtigsten Features wie das Erstellen von Events und das Erfasssen der Teilnehmer, konnten implementiert werden.
 
 Für eine Weiterentwicklung der App sind essenzielle Verbesserungen vorzunehmen. Die Services MQTT-Service und RoomLivecycleService müssen in einem einzigen Service zusammengefasst werden. 
 Dadurch lässt sich die Fehlerrate welche beim Binden des MQTT-Services entstehen deutlich reduzieren. Auf etwaige Handler könnte verzichtet werden. 
@@ -358,4 +353,6 @@ Neben den essenziellen Verbesserungen  wäre eine Implementierung von folgenden 
 \end{description}
 
 
-Eine verbesserte Version der Kontaktverfolgung App lässt sich ideal in der Hochschule einsetzen. ...\todo{1-2 sätze warum}
+Eine verbesserte Version der Kontaktverfolgung App lässt sich ideal in der Hochschule einsetzen. 
+Gerade für die Veranstaltung von Präsenzvorlesungen bietet die App nötige Funktionalität um die Teilnahme von Studenten zurückzuverfolgen.
+Im Falle einer Infektion kann so die Zusammenarbeit mit den Gesundheitsämtern effektiver von­stat­ten­ge­hen.
