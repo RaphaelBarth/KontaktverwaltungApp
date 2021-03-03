@@ -35,7 +35,7 @@ Die genaueren Funktionsweisen des LifeCycleService, MQTT-Server und SQL-Lite Da-
 Die genaueren Funktionsweisen des LifeCycleService, MQTT-Server und SQL-Lite Datenbank werden in den folgenden Kapiteln erläutert.
 
 
-\section{Datenbank}
+\section{Speichern der Nutzerdaten}
 \label{sec:Datenbank}
 Die Datenbank wird als Speichermedium verwendet, um langfristig Information über Objekte zu halten. 
 In der Applikation werden die Tabellenstrukturen durch die Klassen \textit{ParticipantItem} und \textit{RoomItem} umgesetzt. 
@@ -128,7 +128,7 @@ Falls noch Teilnehmer in zu schließenden Räumen eingebucht sind werden Sie rau
 
 
 
-\section{MQTT-Service}
+\section{Kommunikation über MQTT}
 \label{sec:MQTT Service}
 Der MQTT-Service stellt die MQTT-Funktionalität bereit, über welche die App mit anderen Smartphones kommuniziert.
 Das Starten und Stoppen des MQTT-Service findet in der \textit{Activity\_00\_StartActivity} statt. 
@@ -328,7 +328,7 @@ Des Weiteren wird dem Nutzer mitgeteilt das die Internetverbindung verloren wurd
 
 \section{Fazit und Ausblick}
 \label{sec:FuA}
-
+\todo{ganzer absatz ist in vergangenheit}
 In der Entwicklung konnten die in der Vorlesung gelehrten Inhalte nocheinmal selbstständig angewandt werden. 
 Auch verschiedene Nutzungsweisen des Versionsverwaltungstools Git konnten getestet werden. 
 Wo am Anfang hauptsächlich auf einem Branch enwickelt wurde, wurde später wurde auf ein Feature-Based-Setup gewechselt in dem jeder Entwickler einen eigenen Branch pro Freature hatte.
@@ -336,7 +336,7 @@ Zum Schluss wurde sich für einen dev-branch für experimentelle Änderungen und
 Die wichtigsten Features wie das Erstellen von Events und das Erfasssen der Teilnehmer, konnten implementiert werden.
 
 Für eine Weiterentwicklung der App sind essenzielle Verbesserungen vorzunehmen. Die Services MQTT-Service und RoomLivecycleService müssen in einem einzigen Service zusammengefasst werden. 
-Dadurch lässt sich die Fehlerrate welche beim Binden des MQTT-Services entstehen deutlich reduzieren. Auf etwaige Handler könnte verzichtet werden. 
+Dadurch lässt sich die Fehlerrate, welche beim Binden des MQTT-Services entstehen deutlich reduzieren. Auf etwaige Handler könnte verzichtet werden. 
 Das Zusammenfassen verringert zudem deutlich die Gesamtkomplexität des Projektes.
  Ebenso muss in der \textit{PdfClass} das PDF mit der Übersicht aller Teilnehmer überarbeitet werden. 
  In der aktuellen Version wird die E-Mail Adresse ab einer bestimmten Länge zum Teil mit in die nächste Spalte geschrieben.
@@ -344,9 +344,9 @@ Das Zusammenfassen verringert zudem deutlich die Gesamtkomplexität des Projekte
 Neben den essenziellen Verbesserungen  wäre eine Implementierung von folgenden Features erwägenswert.
 \begin{description}
 \item[•]Beschreiben von NFC-Torkens in der App ohne Drittanbieter-App 
-\item[•]Profilbild in den Nutzerinformationen
-\item[•]Benachrichtigen aller Teilnehmer bei positivem Corona-Befund
-\item[•]Eigens URI-Format für NFC Tags
+\item[•]Profilbild für die Nutzer
+\item[•]Benachrichtigen aller Teilnehmer bei positivem Corona-Test
+\item[•]Eigenes URI-Format für NFC-Tags
 \item[•]Manuelle Eingabe als Möglichkeit einen Raum zu betreten.
 \item[•]Chat zwischen Teilnehmern eines Raumes
 \item[•]Unittests unter Verwendung der \textit{TestClass} implementieren
@@ -354,5 +354,5 @@ Neben den essenziellen Verbesserungen  wäre eine Implementierung von folgenden 
 
 
 Eine verbesserte Version der Kontaktverfolgung App lässt sich ideal in der Hochschule einsetzen. 
-Gerade für die Veranstaltung von Präsenzvorlesungen bietet die App nötige Funktionalität um die Teilnahme von Studenten zurückzuverfolgen.
-Im Falle einer Infektion kann so die Zusammenarbeit mit den Gesundheitsämtern effektiver von­stat­ten­ge­hen.
+Gerade für die Veranstaltung von Präsenzvorlesungen bietet die App die nötige Funktionalität um die Teilnahme von Studenten zurückzuverfolgen.
+Im Falle einer Infektion kann so die Zusammenarbeit mit den Gesundheitsämtern effektiver vonstattengehen.
