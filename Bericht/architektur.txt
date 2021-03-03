@@ -1,32 +1,6 @@
-Aritechtur:
-
-Im Wesentlichen besteht die Architektur der Applikation aus den Bereichen Activitys, LifeCycleService, Mqtt-Server und einer SQL-Lite Datenbank. 
-In den Activitys werden den zuvor beschrieben Widgets ihre Funktionen zugewiesen und bilden somit das Userinterface. 
-Möchte sich ein Nutzer registrieren werden dessen Daten über die Activitys aufgenommen und an die interne Datenbank weitergeleitet. 
-Diese dient zur Speicherung von Nutzerdaten als auch von Veranstaltungsinformationen. 
-Wird eine neue Veranstaltung erzeugt aktiviert sich der RoomLifeCycle-Service, jener ist für den Status als auch für das Herunterzählen des Timeouts verantwortlich. 
-Möchte sich nun ein Nutzer der Veranstaltung anzuschließen, kann er per NFC-Tag oder QR-Code beitreten. 
-Wurde das Room-Tag erkannt werden mittels Mqtt-Service die Nutzerdaten aus der Daten-bank gelesen an den Host übermittelt. 
-Dieser erhält dann einen neuen Eintrag in seiner Teilnehmerlis-te mit dem Namen und der Eintritt Zeit des Teilnehmers.
-Ist die Zeit des Timeouts abgelaufen, wird entweder ein Raum eröffnet oder geschlossen. 
-Im geschlossenen Zustand können keine Teilnehmer mehr beitreten und die vorhandenen werden mittels Mqtt-Service entfernt. 
-
-Die genaueren Funktionsweisen des LifeCycleService, Mqtt-Server und SQL-Lite Datenbank werden in den folgenden Kapiteln erläutert.
-
-
-Aritechtur: Neuer findet ich besser :D
-Im Wesentlichen besteht die Architektur der Applikation aus den Bereichen Activites, RoomLifeCycle-Service, Mqtt-Server und einer SQL-Lite Datenbank.
- In den Activitys werden den zuvor beschrieben Widgets ihre Funktionen zugewiesen und bilden somit das Userinterface.
- Möchte sich ein Nutzer re-gistrieren werden dessen Daten über die Activitys aufgenommen und an die interne Datenbank wei-tergeleitet. 
-Diese dient zur Speicherung von Nutzerdaten als auch von Veranstaltungsinformationen. 
-Möchte sich nun ein Nutzer einer Veranstaltung anzuschließen, kann dieser per NFC-Tag oder QR-Code beitreten.
- Wurde das Room-Tag erkannt, werden mittels Mqtt-Service die Nutzerdaten aus der Daten-bank übermittelt an den Host.
- Dieser erhält einen neuen Eintrag in seiner Teilnehmerliste.
-Veranstaltungen werden durch den RoomLifeCycleService überwacht. Der RoomLifeCycleService ent-hält einen Timer welcher den Lebenszyklus eines Events steuert. 
-Läuft das Timeout ab, verändert sich der Eventstatuts in „geschlossen“. 
-Für den Datenaustausch zwischen Host und Teilnehmer kommt der Mqtt-Service zum Einsatz. 
-Verlässt ein Teilnehmer frühzeitig ein Event so wird dieser in der Teilnehmerliste des Host vermerkt und erhält eine Exittime in seinen Nutzerdaten. 
-Geht der Status des Events, wird von Host mittels Mqtt-Service die Nachricht an die Teilnehmer weitergeleitet, 
-jene werden anschließend aus dem Event entfernt und der Raum wird geschlossen.  
-
-Die genaueren Funktionsweisen des LifeCycleService, Mqtt-Server und SQL-Lite Datenbank werden in den folgenden Kapiteln erläutert.
+Allgemeiner Aufbau der App:
+Im Wesentlichen besteht der Aufbau der App aus den Bereichen Activites, RoomLifeCycleService, MQTT-Service, SQL-Lite Datenbank sowie Preferences. Sämtliche benötigten Informationen über den Nutzer der App werden mittels Preferences erfasst. Ohne das vollständige Ausfüllen der Preferences ist ein Verwenden der App nicht möglich. Um später einen eleganten Zugriff auf die Preferences zu erhalten ist eine MySelf Klasse implementiert. In den Activitys werden den verwendeten Widgets ihre Funktionen zugewiesen und bilden somit das Userinterface. 
+Für den Datenaustausch zwischen Host und Teilnehmer kommt der MQTT-Service zum Einsatz. 
+Verändert sich der Status eines Events oder eines Teilnehmers, werden über den MQTT-Service die Datenbanken der anderen Teilnehmer/Host aktualisiert. Hierbei übernimmt die Datenbank die Spei-cherung von Nutzerdaten und von den Veranstaltungsinformationen. 
+Die Teilnahme einer Veranstaltung kann per NFC-Tag oder das Abscannen eines QR-Codes erfolgen. Wird ein Room-Tag erkannt, werden die hinterlegten Daten aus der Klasse MySelf gelesen über den MQTT-Service an die Datenbank des Host übermittelt. Genauere Informationen über den Room-Tag sind in Abschnitt LifeCycleService zu finden.
+Veranstaltungen werden durch den RoomLifeCycleService überwacht. Der RoomLifeCycleService ent-hält einen Timer welcher den Lebenszyklus eines Events steuert. Ändert sich der Lebenszyklus des Events, wird die Datenbank aktualisiert und die entsprechenden Teilnehmer über den MQTT-Service benachrichtigt. Die genaueren Funktionsweisen des LifeCycleService, MQTT-Server und SQL-Lite Da-tenbank werden in den folgenden Kapiteln erläutert.
