@@ -8,9 +8,9 @@ Die App Kontaktverwaltung versucht dieses Problem zu lösen.
 
 In der entwickelten App kann eine Nutzerin oder ein Nutzer die Rolle eines Hosts, also eines Gastgebers oder eines Teilnehmers einnehmen.
 Jeder Nutzer hat ein Profil bestehend aus: Name, E-Mail und Telefonnummer.
-Hosts erstellen Events die an eine reale Adresse gebunden sind. Teilnehmer können dann per NFC-Tag oder einen QR Code in dieses Event eintreten. 
-Ein- und Austrittszeitpunkte werden erfasst und in der Datenbank vermerkt.
-Die Ein- und Austrittszeitpunkte der Events können als PDF exportiert werden.
+Hosts erstellen Events die an eine reale Adresse gebunden sind. Teilnehmer können dann per NFC-Tag oder einen QR-Code in dieses Event eintreten. 
+Ein- und Austrittszeitpunkte von Teilnehmern werden erfasst und in der Datenbank vermerkt.
+Der Host kann Informationen der Events sowie dazugehörigen Teilnehmerinformationen als PDF exportieren.
 Eine ausführliche Demonstration der Funktionen ist auf \href{https://www.youtube.com/watch?v=DpT3mvPvIes}{Youtube} zu finden.
 \section{Allgemeiner Aufbau der App}
 \label{sec:AadA}
@@ -318,7 +318,7 @@ Um das PDF zu teilen, wird ein FileProvider verwendet, welcher im Manifest dekla
 \label{sec:sonstiges}
 Die App ist in der Lage bei einem Verlust der Internetverbindung dem Nutzer ein Feedback mitzuteilen und ein hartes Abbrechen zu verhindern. 
 Dafür wird ein BroadcastReciever verwendet welcher Auf Netzwerkänderungen hört. 
-Der BroadcastReciver wird beim Erstellen des RoomLivecyclesServices an diesen gebunden.
+Der BroadcastReciver wird beim Erstellen des RoomLivecycleServices an diesen gebunden.
  Bricht die Internetverbindung ab werden alle Services gestoppt. 
 Des Weiteren wird dem Nutzer mitgeteilt das die Internetverbindung verloren wurde und er die App mit Internetverbindung neustarten muss.
 
