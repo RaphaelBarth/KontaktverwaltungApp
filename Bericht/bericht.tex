@@ -1,25 +1,35 @@
 \sloppy
 \section{Einleitung}
 \label{sec:Einleitung}
-In der COVID-19-Pandemie sind Veranstaltungen mit mehreren Teilnehmern mit einem erhöhten Infektionsrisiko verbunden, gerade in geschlossenen Events.
+In der COVID-19-Pandemie sind Veranstaltungen mit mehreren Teilnehmern mit einem erhöhten Infektionsrisiko verbunden, gerade in geschlossenen Räumen.
 Häufig besteht an die Veranstalter eine Pflicht Ein- und Austrittszeitpunkt aller Teilnehmer individuell festzuhalten, um im Falle einer nachträglich auftretenden Infektion die Kontaktverfolgung für die Gesundheitsämter möglichst effizient zu gestalten.
 Eine Verwaltung mit Papierformularen ist mit einem hohen Digitalisierungsaufwand verbunden.
-Die App Kontaktverfolgung versucht dieses Problem zu lösen.
+Die App Kontaktverwaltung versucht dieses Problem zu lösen.
 
+In der entwickelten App kann eine Nutzerin oder ein Nutzer die Rolle eines Hosts, also eines Gastgebers oder eines Teilnehmers einnehmen.
+Jeder Nutzer hat ein Profil bestehend aus: Name, E-Mail und Telefonnummer.
+Hosts erstellen Events die an eine reale Adresse gebunden sind. Teilnehmer können dann per NFC-Tag oder einen QR Code in dieses Event eintreten. 
+Ein- und Austrittszeitpunkte werden erfasst und in der Datenbank vermerkt.
+Die Ein- und Austrittszeitpunkte der Events können als PDF exportiert werden.
+Eine ausführliche Demonstration der Funktionen ist auf \href{https://www.youtube.com/watch?v=DpT3mvPvIes}{Youtube} zu finden.
 \section{Allgemeiner Aufbau der App}
 \label{sec:AadA}
-Im Wesentlichen besteht der Aufbau der App aus den in \cref{img:dmodel} dargestellten Activites, dem RoomLifecycleService, dem MQTT-Service, einer SQL-Lite Datenbank sowie den Preferences. 
-Sämtliche benötigten Informationen über den Nutzer der App werden mittels Preferences erfasst. 
+Im Wesentlichen besteht der Aufbau der App aus den in \cref{img:dmodel} dargestellten Activites, dem RoomLifecycleService, dem MQTT-Service, einer SQLite Datenbank sowie den Preferences. 
+Sämtliche benötigten Informationen über den Nutzer der App werden mittels shared Preferences erfasst. 
 Ohne das vollständige Ausfüllen der Preferences ist ein Verwenden der App nicht möglich. 
-Um später einen eleganten Zugriff auf die Preferences zu erhalten ist eine \textit{MySelf} Klasse implementiert. 
-In den Activitys werden den verwendeten Widgets ihre Funktionen zugewiesen und bilden somit das Userinterface. 
-Für den Datenaustausch zwischen Host und Teilnehmer kommt der MQTT-Service zum Einsatz. 
+Um später einen eleganten Zugriff auf Nutzerdaten in den Preferences zu erhalten ist eine \textit{MySelf} Klasse implementiert. 
+In den Activities werden den verwendeten Widgets ihre Funktionen zugewiesen.
+Sie bilden somit das Userinterface. 
+Für den Datenaustausch zwischen Host und Teilnehmer kommt das Protokoll MQTT zum Einsatz.
+Dabei registrieren sich die Apps auf den Endgeräten auf eigene Informationsübertragungskanäle, die Topics genannt werden.
+Die Kommunikation wird schlussendlich durch den MQTT Service realisiert.
 Verändert sich der Status eines Events oder eines Teilnehmers, werden über den MQTT-Service die Datenbanken der anderen Teilnehmer/Host aktualisiert. 
 Hierbei übernimmt die Datenbank die Speicherung von Nutzerdaten und von den Eventinformationen. 
-Die Teilnahme an einem Event kann per NFC-Tag oder das Abscannen eines QR-Codes erfolgen. 
+Die Teilnahme an einem Event kann per NFC-Tag oder dem Abscannen eines QR-Codes erfolgen. 
 Wird ein Room-Tag erkannt, werden die hinterlegten Daten aus der Klasse \textit{MySelf} gelesen über den MQTT-Service an die Datenbank des Host übermittelt. 
 Genauere Informationen über den Room-Tag sind in \cref{sec:RoomLifecycleService} zu finden.
-Events werden durch den RoomLifecycleService überwacht. Der RoomLifecycleService enthält einen Timer welcher den Lebenszyklus eines Events steuert. 
+Events werden durch den RoomLifecycleService überwacht. 
+Der RoomLifecycleService enthält einen Timer welcher den Lebenszyklus eines Events steuert. 
 Ändert sich der Lebenszyklus des Events, wird die Datenbank aktualisiert und die entsprechenden Teilnehmer über den MQTT-Service benachrichtigt. 
 Die genaueren Funktionsweisen des RoomLifecycleService, MQTT-Server und SQL-Lite Da-tenbank werden in den folgenden Kapiteln erläutert.
 \begin{figure}
@@ -28,28 +38,31 @@ Die genaueren Funktionsweisen des RoomLifecycleService, MQTT-Server und SQL-Lite
 	\caption{Grundlegendes Domänenmodel der entwickelten App.}
 	\label{img:dmodel}
 \end{figure}
-Die genaueren Funktionsweisen des RoomLifecycleService, MQTT-Server und SQL-Lite Datenbank werden in den folgenden Kapiteln erläutert.
 
 
 \section{Speicherung der Nutzerdaten}
 \label{sec:Datenbank}
 Die Datenbank wird als Speichermedium verwendet, um langfristig Information über Nutzdaten zu halten. 
 In der Applikation werden die Tabellenstrukturen durch die Klassen \textit{ParticipantItem} und \textit{RoomItem} umgesetzt. \\
-\textit{ParticipantItem} ist für die Verwaltung der Nutzerinformationen von Teilnehmern und Host zuständig.
- \cref{tab:dbParticipant} zeigt die Struktur der entsprechenden Datenbanktabelle \textit{dbParticipant}. Neben dem Name und Kontaktinformationen wie E-Mail und Telefon enthält ein \textit{ParticipantItem} Informationen über ein besuchtes Event. Die Attribute RoomId und Entertime erhalten beim Betreten eines Events einen fixen Wert. 
+\textit{ParticipantItem} ist eine Datenklasse und für die Verwaltung der Nutzerinformationen von Teilnehmern und Host zuständig.
+\cref{tab:dbParticipant} zeigt die Struktur der entsprechenden Datenbanktabelle \textit{dbParticipant}. 
+Neben dem Name und Kontaktinformationen wie E-Mail und Telefon enthält ein \textit{ParticipantItem} Informationen über ein besuchtes Event. 
+Die Attribute RoomId und Entertime erhalten beim Betreten eines Events einen fixen Wert. 
 Die RoomId ist ein Fremdschlüssel auf ein \textit{RoomItem}in der \textit{dbRoom}.
 Kommt es nun zur Schließung eines Events, können mittels RoomId die dazugehörigen Teilnehmer ermittelt werden. 
 Diese erhalten anschließend eine Exittime.\\
 Die Tabellenstruktur der Events wird über die \textit{RoomItem} Klasse realisiert. Der Aufbau der Tabelle \textit{dbRoom} ist in \cref{tab:dbRoom} dargestellt. 
-Beim Erzeugen eines Events muss der Eventname, Name des Veranstalters, Ort des Events, Zeitraum und Status gespeichert werden. Änderungen des Status werden über den in in \cref{sec:RoomLifecycleService} näher beschrieben RoomLivecycleService durchgeführt.
-Da Hosts auch  Teilnehmer in einem anderne Event sein können, wird hierfür das Feld der FremdID eingeführt.
-Ist das Attribut bei einer \textit{RoomItem} Instanz initialisiert, wurde dieses Event von einer anderen Person erstellt und man wird als Teilnehmer gelistet. Die FremdID hält die RoomId aus der Datenbank des Hosts, diese wird benötigt um den Raum später noch mittels des Room-Tags Identifizieren zu können.   \\
-Um zu verhindern das  Datenmanipulationen und Zugriffe nicht im Hauptthread stattfinden, sind im Repository (Klasse welche Funktionen des Data Access Objects implementiert) alle Datenbankaufrufe in seperaten Hintergrundthreads gestartet.
+Beim Erzeugen eines Events sind der Eventname, Name des Veranstalters, Ort des Events, Zeitraum und Status Pflichtangaben.
+Änderungen des Status werden über den in \cref{sec:RoomLifecycleService} näher beschrieben RoomLivecycleService durchgeführt.
+Da Hosts auch selbst Teilnehmer in einem anderen Event sein können, wird hierfür das Feld der FremdID eingeführt.
+Ist das Attribut bei einer \textit{RoomItem} Instanz initialisiert, wurde dieses Event von einer anderen Person erstellt und man wird als Teilnehmer gelistet. 
+Die FremdID hält die RoomId aus der Datenbank des Hosts, diese wird benötigt um den Raum später noch mittels des Room-Tags Identifizieren zu können.   \\
+Um zu verhindern, dass Datenmanipulationen und Zugriffe nicht im Hauptthread stattfinden, sind im Repository (Klasse welche Funktionen des Data Access Objects implementiert) alle Datenbankaufrufe über seperat gestartete Threads implementiert.
 Die Ausnahme bilden die Funktionen mit der Endung \textit{Now}. 
-Da bei diesen keine LiveData zurückgeben wird dürfen diese nur für neben läufige Threads genutzt werden. 
-Endet eine Funktion mit dem Suffix \textit{Own}, werden über diese nur  Informatioene von eigens erstellte Events zurückgegeben.
+Da bei diesen keine LiveData zurückgeben wird dürfen diese nur für nebenläufige Threads genutzt werden. 
+Endet eine Funktion mit dem Suffix \textit{Own}, werden nur  Informationen von eigens erstellte Events zurückgegeben.
 Dies wird vor allem im RoomLifecycleService verwendet damit Teilnehmer nicht selbst Events öffnen oder schließen können.
-Der Host regelt die Öffnungs- und Schließzeiten seiner Events.
+Der Host allein regelt die Öffnungs- und Schließzeiten seiner Events.
 Eine genauere Dokumentation der einzelnen Funktionen ist im \href{https://scm.inftech.hs-mannheim.de/gogs/moa/20moagm/src/dev/Doku/javadoc}{JavaDoc} zu finden.
 \begin{table}[]
 \caption{Struktur der Datenbanktabelle dbParticipant}
@@ -89,33 +102,31 @@ Er hat drei mögliche Zustände:
 \item[•] ROOMISCLOSE
 \end{description}
 
-Der RoomLifecycleService gleicht periodisch ab, ob ein Event gerade geöffnet oder geschlossen sein sollte.
+Der RoomLifecycleService überprüft jede Sekunde, ob Events die geschlossen sind geöffnet werden sollen, ob Events die sich öffnen werden geöffnet werden können und ob Events die geöffnet sind geschlossen werden sollten. 
 Er wird sowohl im Host, als auch im Teilnehmer-Modus benötigt. 
 Die Entscheidung fiel auf einen Service, weil die App auch im nicht-geöffneten Zustand auf Timeouts und Öffnungszeiten reagieren sollte.
-Folgender Problemfall: Der Host eröffnet einen Event und wechselt die App oder sperrt das Smartphone. 
-Wenn die Kontaktverfolgungsapp nun nicht mehr im Vordergrund ist während das Timeout ausläuft oder der Event in die Öffnungszeit reinrutscht, dann würde er nicht geschlossen respektive geöffnet werden. 
+Als Beispiel folgender Problemfall: Der Host eröffnet einen Event und wechselt die App oder sperrt das Smartphone. 
+Wenn die Kontaktverwaltungsapp nun nicht mehr im Vordergrund ist während das Timeout des Events ausläuft oder das Event in die Öffnungszeit reinrutscht, dann würde er nicht geschlossen respektive geöffnet werden. 
 Um also zu vermeiden, dass der Host über die gesamte Zeit sein Smartphone nicht verwenden kann und das Display immer angeschaltet bleiben muss, was mit einem hohen Stromverbrauch verbunden ist, fiel die Entscheidung auf einen Service.
 
-Wird der Service gestartet, wird die Raumüberprüfungsroutine nebenläufig in einem neuen Thread gestartet. Das nimmt die Last vom Hauptthread.
+Wird der Service gestartet, wird die Raumüberprüfungsroutine nebenläufig in einem neuen Thread gestartet. 
+Das nimmt die Last vom Hauptthread.
 Der Eventstatus wird jede Sekunde mit einem Busy-Wait-Algorithmus überprüft.
-Das sollte man nicht in den Hauptthread auslagern, da er diesen unnötig blockiert. 
+Das sollte nicht in den Hauptthread ausgelagert werden, da er diesen unnötig blockiert.
 Der Datenbankzugriff ist also nicht die Ursache für die Designentscheidung, denn der Zugriff wird im Repository ohnehin nebenläufig realisiert.
-Im Thread wird überprüft ob aktuell geschlossene Events geöffnet und aktuell geöffnete Events geschlossen werden sollten.
+Die Überprüfung erfolgt also wie beschrieben in einem seperaten Thread.
+In diesem wird überprüft ob aktuell geschlossene Events geöffnet und aktuell geöffnete Events geschlossen werden sollten.
 Nebenher wird im Mainthread versucht den MQTT-Service zu einzubinden. 
 Denn der Host soll natürlich auf die MQTT-Topics aller Event hören die offen sind bzw. aufhören auf alle Events zu hören die geschlossen sind.
 Außerdem muss der Host den Teilnehmern die Eventeigenschaften und den Öffnungsstatus beim Öffnen mitteilen. 
-Der MQTT-Service wird hier also gebraucht um den Teilnehmern Eventstatusänderungen mitzuteilen.
-Dabei ruft der RoomLifecycleService die Methoden des MQTT-Services nicht direkt auf. Die gesamte Überprüfung der Eventzustände erfolgt nebenläufig in einem anderen Thread. 
-Es kann also vorkommen, dass der Thread schon über den MQTT-Service Eventänderungen versendet obwohl er eigentlich noch nicht gebunden ist. 
+Der MQTT-Service wird hier also gebraucht um den Teilnehmern Event-Informationen mitzuteilen.
+Dabei ruft der RoomLifecycleService die Methoden des MQTT-Services nicht direkt auf. 
+Da die Überprüfung nebenläufig erfolgt, kann es vorkommen, dass der Thread schon über den MQTT-Service Eventänderungen versendet obwohl dieser eigentlich noch nicht gebunden ist. 
 In dem Fall kommt es zu einer Exception.
 Deshalb haben wurde ein Handler eingeführt. Der Thread schreibt in eine threadsichere Liste die Events rein, die ihren Zustand geändert haben und über MQTT versendet werden sollen. 
-Ist der MQTT-Service im Hauptthread gebunden, dann arbeitet besagter Handler mit der Methode \textit{postPendingRooms()} diese Events im Hauptthread ab. 
+Ist der MQTT-Service im Hauptthread gebunden, dann arbeitet besagter Handler mit der Methode \textit{postPendingRooms()} diese Events aus der threadsicheren Liste im Hauptthread ab. 
 Dadurch ist stets sichergestellt, dass der MQTT-Service nur Events erhält wenn er gebunden ist. 
 Dieser Workaround wäre vermeidbar gewesen, wäre Statusüberprüfung und Nachrichtenübertragung in einem zentralen Service realisiert worden. So hätte man gar nicht auf das Binden warten müssen.
-
-Jede Sekunde wird nun überprüft ob Events die geschlossen sind geöffnet werden sollen, ob Events die sich öffnen werden geöffnet werden können und ob Events die geöffnet sind geschlossen werden sollten. 
-Falls noch Teilnehmer in zu schließenden Events eingebucht sind werden Sie rausgeworfen. In der Datenbank wird dann für alle Teilnehmer als Austrittszeitpunkt die Timeout-Zeit des Events eingetragen.
-
 
 
 \section{Kommunikation über MQTT}
@@ -123,23 +134,23 @@ Falls noch Teilnehmer in zu schließenden Events eingebucht sind werden Sie raus
 Der MQTT-Service stellt die MQTT-Funktionalität bereit, über welche die App mit anderen Smartphones kommuniziert.
 Das Starten und Stoppen des MQTT-Service findet in der \textit{Activity\_00\_StartActivity} statt. 
 Alle anderen Activities binden lediglich den MQTT-Service. Das Binden des MQTT-Service findet in  \textit{Activity\_11\_EnterViaNfcQr}, \textit{Activity\_14\_RoomParticipantsDetails} und \textit{Activity\_22\_RoomHostDetails} statt. 
-Des Weiteren wird der Service in dem RoomLivecycle-Service gebunden. 
+Des Weiteren wird der Service im RoomLivecycle-Service gebunden. 
 Näheres hierzu unter \cref{sec:RoomLifecycleService}.  
 Beim Verwenden des MQTT-Service wird in jeder Activity geprüft, ob dieser schon gebunden ist (not null). 
 Ist dies nicht der Fall, wird das zu sendende Objekt zwischengespeichert und bei erfolgreichem Binden verarbeitet. 
 Die im MQTT-Service implementierten Methoden sind ausführlich mittels \href{https://scm.inftech.hs-mannheim.de/gogs/moa/20moagm/src/dev/Doku/javadoc}{JavaDoc} erklärt. 
 
 Die Kommunikation zwischen dem Host und den Teilnehmern verläuft beim MQTT-Protokoll über sogenannte Topics. 
-Für einen Event werden, wie \cref{img:mqtt} zeigt, immer zwei Topics benötigt. 
+Für ein Event werden, wie \cref{img:mqtt} zeigt, immer zwei Topics benötigt. 
 Der Teilnehmer kann einem Event über die Topic \textit{moagm/Room-Tag} beitreten. 
 Der Host sendet die nötigen Informationen für die Teilnehmer über die Topic \textit{moagm/Room-Tag/public} an alle Teilnehmer. 
-Durch die Trennung der Kanäle wird verhindert, dass Teilnehmer die Nachrichten, welche von anderen Teilnehmern an den Host gesendet werden, empfangen können.
+Durch die Trennung der Kanäle wird verhindert, dass Teilnehmer die Nachrichten empfangen können, welche von anderen Teilnehmern an den Host gesendet werden.
 
 Insgesamt gibt es vier verschiedene Nachrichtentypen, welche zwischen den Teilnehmern und dem Host ausgetauscht werden. Alle Nachrichten werden im JSON-Format versendet. 
 Dabei lassen sich die Nachrichten in zwei Gruppen unterteilen.
 Die Nachrichten \textit{anmeldung.json} und \textit{abmeldung.json} werden vom Teilnehmer an den Host gesendet. 
 \textit{teilnehmer.json} und \textit{rauminfo.json} sendet der Host an alle Teilnehmer. 
-Mittels eines Converters werden die entsprechenden JSON-Objekte erzeugt und wieder in verwendbare Datentypen zurück gewandelt. 
+Mittels eines Konverters werden die entsprechenden JSON-Objekte erzeugt und wieder in verwendbare Datentypen zurück gewandelt. 
 Zum Identifizieren eines Nachrichtentyps wird (warum auch immer..) nicht das Typfeld benutzt. 
 Das Identifizieren wird mit den folgenden Schlüsselworten durchgeführt.
 \begin{description}
@@ -150,11 +161,12 @@ Das Identifizieren wird mit den folgenden Schlüsselworten durchgeführt.
 \end{description}
 Abhängig von dem empfangen Datentyp werden unterschiedliche Aktionen durchgeführt.
 \\
-Mit der in \cref{lst:anmeldung} dargestellten \textit{anmeldung.json} meldet sich ein Teilnehmer beim Host an und stellt eine Verbindung zu der entsprechenden Topic her. In der Nachricht sind alle relevanten Informationen des Teilnehmers enthalten sowie die Uhrzeit wann er den Event betreten hat.
+Mit der in \cref{lst:anmeldung} dargestellten \textit{anmeldung.json} meldet sich ein Teilnehmer beim Host an und stellt eine Verbindung zu dem entsprechenden Topic her. 
+In der Nachricht sind alle relevanten Informationen des Teilnehmers enthalten sowie die Uhrzeit wann er den Event betreten hat.
 Informationen über einen Teilnehmer können den Preferences über die \textit{MySelf} Klasse entnommen werden. 
 Der MQTT-Service konvertiert die erhaltene JSON-Nachricht mittels der \textit{AdapterJsonMqtt} Klasse in den passenden Datentyp. 
 Das erhalte \textit{ParticipantItem} Objekt wird in der Datenbanktabelle \textit{dbParticipant} mit der  entsprechenden RaumId abgespeichert. 
-Die entsprechende RaumId kann der Topic entnommen werden, über welche die JSON-Nachricht empfangen wurde. 
+Die RaumId kann dem Topic entnommen werden, über welche die JSON-Nachricht empfangen wurde. 
 Im Anschluss wird an alle Teilnehmer ein \textit{teilnehmer.json} sowie \textit{rauminfo.json} gesendet.
 \begin{figure}
 	\centering
@@ -262,17 +274,17 @@ Für die Erstellung wird die externe Bibliothek zxing von journeyapps benutzt. D
 
 Ein Schreiben des Room-Tags auf einen NFC Sticker ist nicht implemenentiert.
  Apps wie \href{https://play.google.com/store/apps/details?id=com.wakdev.wdnfc&hl=de&gl=US}{NFC Tools} des Unternehmens wakdev aus dem PlayStore schaffen hier aber Abhilfe. 
-Dort kann der Tag in Plaintext-Format auf den NFC-Tag geschrieben werden.
-Eine URI soll nicht vergeben werden, da der Scanner nicht drauf reagiert.
-Im Laufe der Entwicklung  wurde fest definiert, dass ein Veranstalter seine eigenen Events nicht betreten dürfte.
-Außerdem darf ein Teilnehmer, nachdem er eine Sitzung verlassen hatte, nicht wieder erneut ihr teilnehmen.
+Dort kann der Room-Tag im Plaintext-Format auf den NFC-Tag geschrieben werden.
+Eine URI soll nicht vergeben werden, da der NFC-Scanner nicht drauf reagieren wird.
+Im Laufe der Entwicklung  wurde fest definiert, dass ein Veranstalter seine eigenen Events nicht nochmal als Teilnehmer betreten dürfte.
+Außerdem darf ein Teilnehmer, nachdem er eine Sitzung verlassen hatte, nicht wieder erneut an der Veranstaltung teilnehmen.
 Damit wurden irreführende Einträge in der Auswertung vermieden. Dieses Verhalten wird mit der Methode \textit{checkEnterPeriomission()} in der \textit{Activity\_11\_EnterViaQrNfc} abgefangen.
 \\ 
 %\subsubsection*{Betreten eines Raumes über einen QR-Code.}
 %\label{paragraph:QR}
 Wünscht der Teilnehmer über einen QR-Code einzutreten, dann wird in der \textit{Activity\_11\_EnterViaQrNfc} die Funktion \textit{callScanner()} aus der \textit{QrCodeManager} Klasse gerufen. 
 Dort wird die Scanner-Activitiy aus zxing gestartet, die einen Rückgabewert liefert. 
-Es ist auch möglich den Scanner zu vorkonfigurieren, so, dass z.B. immer der Kamerablitz angeschaltet ist um auch bei schlechten Licht-Bedingungen den QR-Code gut zu erkennen. 
+Es ist auch möglich den Scanner vorzukonfigurieren, so, dass z.B. immer der Kamerablitz angeschaltet ist um auch bei schlechten Licht-Bedingungen den QR-Code gut zu erkennen. 
 Außerdem kann ein Timeout eingestellt werden, falls der Nutzer den QR-Code in einer gewissen Zeit nicht einscannt.
 In unserem Projekt wurde sich aber wegen der Benutzerfreundlichkeit gegen diese Konfiguration entschieden.
 Der Scanner wird über einen Intent gestartet und liefert wenn er fertig ist ein Ergebnis zurück.
@@ -294,8 +306,8 @@ In den Extras des NFC-Intents befindet sich dann er abgelesene Room-Tag. Der Abl
 Das System soll dem Nutzer die Möglichkeit bieten Informationen über ein Event als PDF zu teilen. 
 Dabei gibt es zwei unterschiedliche PDF‘s, diese beinhalten die generellen Eventinformationen, sowie den dazugehörigen QR-Code oder eine Liste aller Teilnehmer.
 Das Android-Framework  verfügt über eine \textit{PdfDocument} Klasse, die zum Erstellen von PDF‘s genutzt wird. 
-Für eine A4 Seite nach DIN Norm ergeben sich die Werte 846x594 Pixel. Näheres zur Berechnung der Pixelwerte ist unter \href{https://developer.android.com/reference/android/graphics/pdf/PdfDocument.PageInfo}{developer.android} zu finden. D
-ie erstellte Seite wird mittels eines Canvas editiert. 
+Für eine A4 Seite nach DIN Norm ergeben sich die Werte 846x594 Pixel. Näheres zur Berechnung der Pixelwerte ist unter \href{https://developer.android.com/reference/android/graphics/pdf/PdfDocument.PageInfo}{developer.android} zu finden. 
+Die erstellte Seite wird mittels eines Canvas editiert. 
 Die Formatierung  der Texte und Grafikelemente lassen sich über die \textit{Paint} Klasse einstellen.
 Das erstellte PDF-Dokument wird im externen Dateiverzeichnis der App abgespeichert. Der Nutzer besitzt bei einem fehlgeschlagenen Teilen somit trotzdem die Möglichkeit auf das erstellte PDF zuzugreifen.
 Um das PDF zu teilen, wird ein FileProvider verwendet, welcher im Manifest deklariert ist.  Der FileProvider bietet dem Nutzer eine Auswahl der installierten Anwendungen, über welche er das PDF teilen kann.
@@ -304,10 +316,6 @@ Um das PDF zu teilen, wird ein FileProvider verwendet, welcher im Manifest dekla
 
 \section{Weitere Funktionalitäten}
 \label{sec:sonstiges}
-Die Anwendung ermöglicht eine effiziente, einfache Möglichkeit dezentral und mit wenig Ressourcen eine Kontaktverfolgung umzusetzen.
-Sie erfüllt die Grundsätze der Datenminimierung, Zweckbindung, Richtigkeit und Speicherbegrenzung der Datenschutz Grundverordnung. Nutzerdaten werden nur auf den Endgeräten gespeichert. 
-Sie werden nur gespeichert, sollte ein Teilnehmer oder ein Host auch wirklich Kontakt mit diesem Nutzer gehabt haben. 
-Außerdem werden alle Einträge die älter als 14 Tage sind aus der Datenbank gelöscht.\\
 Die App ist in der Lage bei einem Verlust der Internetverbindung dem Nutzer ein Feedback mitzuteilen und ein hartes Abbrechen zu verhindern. 
 Dafür wird ein BroadcastReciever verwendet welcher Auf Netzwerkänderungen hört. 
 Der BroadcastReciver wird beim Erstellen des RoomLivecyclesServices an diesen gebunden.
@@ -316,12 +324,12 @@ Des Weiteren wird dem Nutzer mitgeteilt das die Internetverbindung verloren wurd
 
 \section{Fazit und Ausblick}
 \label{sec:FuA}
-In der entwickelten App kann eine Nutzerin oder ein Nutzer die Rolle eines Hosts, also eines Gastgebers oder eines Teilnehmers einnehmen.
-Jeder Nutzer hat ein Profil bestehend aus: Name, E-Mail und Telefonnummer.
-Hosts erstellen Events die an eine reale Adresse gebunden sind. Teilnehmer können dann per NFC-Tag oder einen QR Code in dieses Event eintreten. Ein- und Austrittszeitpunkte werden erfasst und in der Datenbank vermerkt.
-Die Ein- und Austrittszeitpunkte der Events können als PDF exportiert werden.
+Die Anwendung ermöglicht eine effiziente, einfache Möglichkeit dezentral und mit wenig Ressourcen eine Kontaktverfolgung umzusetzen.
+Sie erfüllt die Grundsätze der Datenminimierung, Zweckbindung, Richtigkeit und Speicherbegrenzung der Datenschutz Grundverordnung. Nutzerdaten werden nur auf den Endgeräten gespeichert. 
+Sie werden nur gespeichert, sollte ein Teilnehmer oder ein Host auch wirklich Kontakt mit diesem Nutzer gehabt haben. 
+Außerdem werden alle Einträge die älter als 14 Tage sind aus der Datenbank gelöscht.
 
-Für eine Weiterentwicklung der App sind essenzielle Verbesserungen vorzunehmen. Die Services MQTT-Service und RoomLivecycleService müssen in einem einzigen Service zusammengefasst werden. 
+Für eine Weiterentwicklung der App sind jedoch essenzielle Verbesserungen vorzunehmen. Die Services MQTT-Service und RoomLivecycleService müssen in einem einzigen Service zusammengefasst werden. 
 Dadurch lässt sich die Fehlerrate, welche beim Binden des MQTT-Services entstehen deutlich reduzieren. Auf etwaige Handler könnte verzichtet werden. 
 Das Zusammenfassen verringert zudem deutlich die Gesamtkomplexität des Projektes.
  Ebenso muss in der \textit{PdfClass} das PDF mit der Übersicht aller Teilnehmer überarbeitet werden. 
@@ -329,16 +337,16 @@ Das Zusammenfassen verringert zudem deutlich die Gesamtkomplexität des Projekte
  Ziel ist es, dass in dieser Situation ein automatischer Zeilenumbruch in der entsprechenden Spalte eingefügt wird.
 Neben den essenziellen Verbesserungen  wäre eine Implementierung von folgenden Features erwägenswert.
 \begin{description}
-\item[•]Beschreiben von NFC-Tag in der App ohne Drittanbieter-App 
+\item[•]Beschreiben von NFC-Tags in der App ohne Drittanbieter-App
+\item[•]Eigenes URI-Format für NFC-Tags 
+\item[•]Manuelle Eingabe als Möglichkeit einen Event zu betreten.
 \item[•]Profilbild für die Nutzer
 \item[•]Benachrichtigen aller Teilnehmer bei positivem Corona-Test
-\item[•]Eigenes URI-Format für NFC-Tags
-\item[•]Manuelle Eingabe als Möglichkeit einen Event zu betreten.
 \item[•]Chat zwischen Teilnehmern eines Events
 \item[•]Unittests unter Verwendung der \textit{TestClass} implementieren
 \end{description}
 
 
-Eine verbesserte Version der Kontaktverfolgung App lässt sich ideal in der Hochschule einsetzen. 
+Eine verbesserte Version der Kontaktverwaltung-App lässt sich ideal in der Hochschule einsetzen. 
 Gerade für die Veranstaltung von Präsenzvorlesungen bietet die App die nötige Funktionalität um die Teilnahme von Studenten zurückzuverfolgen.
 Im Falle einer Infektion kann so die Zusammenarbeit mit den Gesundheitsämtern effektiver vonstattengehen.
