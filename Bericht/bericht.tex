@@ -48,7 +48,7 @@ In der Applikation werden die Tabellenstrukturen durch die Klassen \textit{Parti
 \cref{tab:dbParticipant} zeigt die Struktur der entsprechenden Datenbanktabelle \textit{dbParticipant}. 
 Neben dem Name und Kontaktinformationen wie E-Mail und Telefon enthält ein \textit{ParticipantItem} Informationen über ein besuchtes Event. 
 Die Attribute RoomId und Entertime erhalten beim Betreten eines Events einen fixen Wert. 
-Die RoomId ist ein Fremdschlüssel auf ein \textit{RoomItem}in der \textit{dbRoom}.
+Die RoomId ist ein Fremdschlüssel auf ein \textit{RoomItem} in der \textit{dbRoom}.
 Kommt es nun zur Schließung eines Events, können mittels RoomId die dazugehörigen Teilnehmer ermittelt werden. 
 Diese erhalten anschließend eine Exittime.\\
 Die Tabellenstruktur der Events wird über die \textit{RoomItem} Klasse realisiert. Der Aufbau der Tabelle \textit{dbRoom} ist in \cref{tab:dbRoom} dargestellt. 
