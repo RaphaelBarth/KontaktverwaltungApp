@@ -1,6 +1,14 @@
 # 20moagm
 Ziel des Projekts ist der Entwurf und die Implementierung einer CoronaTrackingApp unter Android. Sie soll die Nachverfolgung von Infektionen erleichtern.
 
+## Ordnerstruktur
+
+- Doku -> Dokumentation
+- MyMQTT -> -> TestApp
+- QRCodeApp -> TestApp
+- NFCDemo -> TestApp
+- CreateRoomDemo -> FinaleApp
+
 ## Entwurf
 Gastgeber können virtuelle Räume erstellen in die sich Nutzer dann beim Betreten physischer Räume per QR-Code oder NFC-Tag eintragen und beim Verlassen wieder Austragen.
 
@@ -34,11 +42,10 @@ Zur besseren Übersicht.
 
 
 
-
 ### mqtt password
 
 ```
 USER    PASSWORD ACCESS
 20moagm 1a748f9e ['20moa00/public/#', '20moagm/#', 'public/#']
-
 ```
+mqtt server funktioniert nicht mehr Quellcode muss entsprechend angepasst werden
